@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>占いの館 </title>
+    <title>占いの館</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -300,22 +300,6 @@
         // 十二運
         const twelveStages = ['胎', '養', '長生', '沐浴', '冠帯', '建禄', '帝旺', '衰', '病', '死', '墓', '絶'];
         
-        // 二十四節気（概算）
-        const solarTerms = [
-            {month: 1, day: 6, term: '小寒', zodiac: '丑'},
-            {month: 2, day: 4, term: '立春', zodiac: '寅'},
-            {month: 3, day: 6, term: '啓蟄', zodiac: '卯'},
-            {month: 4, day: 5, term: '清明', zodiac: '辰'},
-            {month: 5, day: 6, term: '立夏', zodiac: '巳'},
-            {month: 6, day: 6, term: '芒種', zodiac: '午'},
-            {month: 7, day: 7, term: '小暑', zodiac: '未'},
-            {month: 8, day: 8, term: '立秋', zodiac: '申'},
-            {month: 9, day: 8, term: '白露', zodiac: '酉'},
-            {month: 10, day: 8, term: '寒露', zodiac: '戌'},
-            {month: 11, day: 8, term: '立冬', zodiac: '亥'},
-            {month: 12, day: 7, term: '大雪', zodiac: '子'}
-        ];
-        
         // 60干支表
         function getSixtyPillar(index) {
             const stemIndex = index % 10;
@@ -326,19 +310,84 @@
             };
         }
         
-        // 月支を節入りから判定
-        function getMonthBranch(month, day) {
-            for (let i = 0; i < solarTerms.length; i++) {
-                const term = solarTerms[i];
-                const nextTerm = solarTerms[(i + 1) % 12];
-                
-                if (month === term.month && day >= term.day) {
-                    return term.zodiac;
-                } else if (month === term.month && day < term.day) {
-                    return solarTerms[(i + 11) % 12].zodiac;
+        /**
+         * 二十四節気の節入り日を計算する（概算）
+         * 年ごとに変動する節入り日を計算式で求めることで、より正確な月の区切りを判定します。
+         * @param {number} year - 年
+         * @param {number} month - 月
+         * @returns {{day: number, zodiac: string, name: string}} - 節入り日、その月の地支、節気名
+         */
+        function getSetsuiriDate(year, month) {
+            // 各月の節入りの計算用定数 (C)
+            const setsuiriConstants = {
+                1:  { name: '小寒', C: 5.4055, zodiac: '丑' },
+                2:  { name: '立春', C: 4.15,   zodiac: '寅' },
+                3:  { name: '啓蟄', C: 5.63,   zodiac: '卯' },
+                4:  { name: '清明', C: 4.9,    zodiac: '辰' },
+                5:  { name: '立夏', C: 5.52,   zodiac: '巳' },
+                6:  { name: '芒種', C: 5.8,    zodiac: '午' },
+                7:  { name: '小暑', C: 7.1,    zodiac: '未' },
+                8:  { name: '立秋', C: 7.5,    zodiac: '申' },
+                9:  { name: '白露', C: 7.8,    zodiac: '酉' },
+                10: { name: '寒露', C: 8.3,   zodiac: '戌' },
+                11: { name: '立冬', C: 7.5,   zodiac: '亥' },
+                12: { name: '大雪', C: 7.18,  zodiac: '子' }
+            };
+
+            const termData = setsuiriConstants[month];
+            if (!termData) return null;
+            
+            // 節入り日の概算式
+            const day = Math.floor(termData.C + 0.2422 * (year - 1900) - Math.floor((year - 1900) / 4));
+            
+            return { day: day, zodiac: termData.zodiac, name: termData.name };
+        }
+
+        /**
+         * 月柱（天干と地支）を計算する
+         * @param {number} year - 生まれた年
+         * @param {number} month - 生まれた月
+         * @param {number} day - 生まれた日
+         * @param {string} yearStem - 年柱の天干
+         * @returns {{stem: string, branch: string}} - 月柱の天干と地支
+         */
+        function getMonthPillar(year, month, day, yearStem) {
+            let targetMonth = month;
+            let targetYear = year;
+            let setsuiri = getSetsuiriDate(targetYear, targetMonth);
+
+            // 生まれた日がその月の節入り日より前の場合、前の月とする
+            if (day < setsuiri.day) {
+                targetMonth = month === 1 ? 12 : month - 1;
+                // 1月から12月に戻る場合は、年も1年戻す
+                if (month === 1) {
+                    targetYear--;
                 }
+                setsuiri = getSetsuiriDate(targetYear, targetMonth);
             }
-            return solarTerms[month - 1].zodiac;
+            
+            const monthBranch = setsuiri.zodiac;
+            
+            // 年干から月干を求める（年干から月干の求め方）
+            // 甲己の年→丙寅, 乙庚の年→戊寅, 丙辛の年→庚寅, 丁壬の年→壬寅, 戊癸の年→甲寅
+            const yearStemIndex = heavenlyStems.indexOf(yearStem);
+            const firstMonthStemIndexMap = [2, 4, 6, 8, 0]; // 丙, 戊, 庚, 壬, 甲 (甲己, 乙庚, 丙辛, 丁壬, 戊癸 の順)
+            
+            const firstMonthStemIndex = firstMonthStemIndexMap[yearStemIndex % 5];
+            
+            const toraMonthIndex = 2; // earthlyBranchesでの'寅'のインデックス
+            const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
+            
+            // '寅'の月からのオフセットを計算
+            let monthOffset = monthBranchIndex - toraMonthIndex;
+            if (monthOffset < 0) {
+                monthOffset += 12;
+            }
+            
+            const monthStemIndex = (firstMonthStemIndex + monthOffset) % 10;
+            const monthStem = heavenlyStems[monthStemIndex];
+            
+            return { stem: monthStem, branch: monthBranch };
         }
         
         // 十神判定
@@ -433,42 +482,47 @@
             const month = birthDate.getMonth() + 1;
             const day = birthDate.getDate();
             
-            // 年柱計算（簡易版）
-            const yearIndex = (year - 1864) % 60;
+            // 1. 年の始まりを立春で判定
+            const risshun = getSetsuiriDate(year, 2); // 2月(寅の月)の節入り=立春
+            const risshunDate = new Date(year, 1, risshun.day); // 比較用のDateオブジェクト
+            
+            const astrologicalYear = birthDate < risshunDate ? year - 1 : year;
+            
+            // 2. 年柱の計算
+            // 四柱推命の年(astrologicalYear)を元に計算
+            const yearIndex = (astrologicalYear - 1864) % 60;
             const yearPillar = getSixtyPillar(yearIndex);
             
-            // 月柱計算
-            const monthBranch = getMonthBranch(month, day);
-            const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
-            const monthStemIndex = ((year % 10) * 2 + Math.floor(monthBranchIndex / 2)) % 10;
-            const monthStem = heavenlyStems[monthStemIndex];
-            
-            // 日柱計算（簡易版）
+            // 3. 月柱の計算
+            const monthPillar = getMonthPillar(year, month, day, yearPillar.stem);
+
+            // 4. 日柱計算
             const baseDate = new Date(1900, 0, 1);
             const daysDiff = Math.floor((birthDate - baseDate) / (1000 * 60 * 60 * 24));
-            const dayIndex = daysDiff % 60;
+            // 1900年1月1日は甲戌(インデックス10)なので、オフセットを加えて計算します
+            const dayIndex = (daysDiff + 10) % 60;
             const dayPillar = getSixtyPillar(dayIndex);
             
-            // 時柱計算
+            // 5. 時柱計算
             const hourBranchIndex = Math.floor((hour + 1) / 2) % 12;
             const hourBranch = earthlyBranches[hourBranchIndex];
             const dayStemIndex = heavenlyStems.indexOf(dayPillar.stem);
-            const hourStemIndex = ((dayStemIndex % 5) * 2 + Math.floor(hourBranchIndex / 1)) % 10;
+            const hourStemIndex = ((dayStemIndex % 5) * 2 + hourBranchIndex) % 10;
             const hourStem = heavenlyStems[hourStemIndex];
             
             // 命式表示（セレクトボックスに値を設定）
             document.getElementById('yearStem').value = yearPillar.stem;
             document.getElementById('yearBranch').value = yearPillar.branch;
-            document.getElementById('monthStem').value = monthStem;
-            document.getElementById('monthBranch').value = monthBranch;
+            document.getElementById('monthStem').value = monthPillar.stem;
+            document.getElementById('monthBranch').value = monthPillar.branch;
             document.getElementById('dayStem').value = dayPillar.stem;
             document.getElementById('dayBranch').value = dayPillar.branch;
             document.getElementById('hourStem').value = hourStem;
             document.getElementById('hourBranch').value = hourBranch;
             
-            // 性別情報を保存（大運計算で使用）
+            // 性別と生年月日情報をグローバルに保存（大運計算で使用）
             window.currentGender = gender;
-            window.currentBirthDate = birthDate;
+            window.currentBirthDate = new Date(document.getElementById('birthDate').value + 'T' + document.getElementById('birthTime').value);
             
             // 分析を更新
             updateAnalysis();
@@ -606,7 +660,7 @@
         function getElementAnalysis(dayElement, elementCount) {
             const total = Object.values(elementCount).reduce((a, b) => a + b, 0);
             const dayElementCount = elementCount[dayElement];
-            const ratio = dayElementCount / total;
+            const ratio = total > 0 ? dayElementCount / total : 0;
             
             if (ratio > 0.4) {
                 return `日主の${dayElement}の気が強く、自分の個性を発揮しやすい命式です。`;
@@ -639,6 +693,8 @@
             const sameElementCount = elementCount[dayElement];
             
             const total = Object.values(elementCount).reduce((a, b) => a + b, 0);
+            if (total === 0) return '不明';
+
             const supportRatio = supportCount / total;
             const sameElementRatio = sameElementCount / total;
             
@@ -700,7 +756,8 @@
             return fortune;
         }
         
-        // 大運計算
+        // --- ここから修正 ---
+        // 大運計算（PDFの算出方法に基づいて修正）
         function calculateDaiunn() {
             const yearStem = document.getElementById('yearStem').value;
             const monthStem = document.getElementById('monthStem').value;
@@ -712,19 +769,61 @@
             }
             
             const gender = window.currentGender;
-            const birthDate = window.currentBirthDate;
-            
+            const birthDateWithTime = window.currentBirthDate; // 時刻情報を含むDateオブジェクト
+
             // 年干の陰陽判定
             const yearStemIndex = heavenlyStems.indexOf(yearStem);
             const isYangYear = yearStemIndex % 2 === 0;
             
-            // 順行・逆行の判定
+            // 1. 順行・逆行の判定
             const isForward = (isYangYear && gender === 'male') || (!isYangYear && gender === 'female');
             
-            // 立運年齢の計算（簡易版：3歳から開始として計算）
-            const startAge = 3;
+            // 2. 初運（大運開始年齢）の計算
+            const year = birthDateWithTime.getFullYear();
+            const month = birthDateWithTime.getMonth() + 1; // 1-12
             
-            // 大運の干支を計算
+            let daysDiff = 0;
+            let setsuiriDateForCalc;
+
+            if (isForward) { // 順行：次の節入りまで進んで数える
+                const currentMonthSetsuiri = getSetsuiriDate(year, month);
+                
+                // 生まれた日が現在の月の節入り日「以降」か「より前」かで判断
+                if (birthDateWithTime.getDate() >= currentMonthSetsuiri.day) {
+                    // 「以降」の場合、次の月の節入りを探す
+                    const nextMonth = month === 12 ? 1 : month + 1;
+                    const nextYear = month === 12 ? year + 1 : year;
+                    const nextSetsuiri = getSetsuiriDate(nextYear, nextMonth);
+                    setsuiriDateForCalc = new Date(nextYear, nextMonth - 1, nextSetsuiri.day);
+                } else {
+                    // 「より前」の場合、現在の月の節入りが「次の節入り」
+                    setsuiriDateForCalc = new Date(year, month - 1, currentMonthSetsuiri.day);
+                }
+                const timeDiff = setsuiriDateForCalc.getTime() - birthDateWithTime.getTime();
+                daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+
+            } else { // 逆行：前の節入りまで戻って数える
+                const currentMonthSetsuiri = getSetsuiriDate(year, month);
+                
+                // 生まれた日が現在の月の節入り日「より前」か「以降」かで判断
+                if (birthDateWithTime.getDate() < currentMonthSetsuiri.day) {
+                    // 「より前」の場合、前の月の節入りを探す
+                    const prevMonth = month === 1 ? 12 : month - 1;
+                    const prevYear = month === 1 ? year - 1 : year;
+                    const prevSetsuiri = getSetsuiriDate(prevYear, prevMonth);
+                    setsuiriDateForCalc = new Date(prevYear, prevMonth - 1, prevSetsuiri.day);
+                } else {
+                    // 「以降」の場合、現在の月の節入りが「前の節入り」
+                    setsuiriDateForCalc = new Date(year, month - 1, currentMonthSetsuiri.day);
+                }
+                const timeDiff = birthDateWithTime.getTime() - setsuiriDateForCalc.getTime();
+                daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+            }
+            
+            // PDFのルールに基づき初運年齢を計算 (3日で1歳、端数は四捨五入、最低1歳)
+            const startAge = Math.max(1, Math.round(daysDiff / 3));
+            
+            // 3. 大運の干支と表を生成
             const monthStemIndex = heavenlyStems.indexOf(monthStem);
             const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
             
@@ -739,8 +838,9 @@
                     stemIndex = (monthStemIndex + i + 1) % 10;
                     branchIndex = (monthBranchIndex + i + 1) % 12;
                 } else {
-                    stemIndex = (monthStemIndex - i - 1 + 10) % 10;
-                    branchIndex = (monthBranchIndex - i - 1 + 12) % 12;
+                    // 負数にならないように十分な数を足してから剰余を計算
+                    stemIndex = (monthStemIndex - i - 1 + 100) % 10;
+                    branchIndex = (monthBranchIndex - i - 1 + 120) % 12;
                 }
                 
                 const daiunnStem = heavenlyStems[stemIndex];
@@ -762,6 +862,7 @@
             document.getElementById('daiunnResult').innerHTML = daiunnHTML;
             document.getElementById('daiunnSection').style.display = 'block';
         }
+        // --- ここまで修正 ---
         
         // 大運の運勢傾向
         function getDaiunnFortune(tenGod, period) {
