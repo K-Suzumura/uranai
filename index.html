@@ -94,14 +94,16 @@
         }
         .analysis-item {
             margin-bottom: 15px;
-            padding: 10px;
+            padding: 15px;
             background: white;
             border-radius: 5px;
+            border-left: 5px solid #667eea;
         }
         .analysis-title {
             font-weight: bold;
             color: #667eea;
             margin-bottom: 5px;
+            font-size: 1.1em;
         }
         .element-balance {
             display: flex;
@@ -147,6 +149,10 @@
             padding: 5px;
             text-align: center;
             border: 1px solid #ddd;
+        }
+        .transformed {
+            color: red;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -243,7 +249,14 @@
                         <td id="yearHidden"></td>
                     </tr>
                     <tr>
-                        <td><strong>十神</strong></td>
+                        <td><strong>蔵干通変星</strong></td>
+                        <td id="hourHiddenGod"></td>
+                        <td id="dayHiddenGod"></td>
+                        <td id="monthHiddenGod"></td>
+                        <td id="yearHiddenGod"></td>
+                    </tr>
+                    <tr>
+                        <td><strong>通変星</strong></td>
                         <td id="hourGod"></td>
                         <td>日主</td>
                         <td id="monthGod"></td>
@@ -272,245 +285,175 @@
     </div>
 
     <script>
-        // 十干
+        // Data definitions
         const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-        const stemElements = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水'];
-        const stemYinYang = ['陽', '陰', '陽', '陰', '陽', '陰', '陽', '陰', '陽', '陰'];
-        
-        // 十二支
+        const stemElements = { '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土', '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水' };
+        const stemYinYang = { '甲': '陽', '乙': '陰', '丙': '陽', '丁': '陰', '戊': '陽', '己': '陰', '庚': '陽', '辛': '陰', '壬': '陽', '癸': '陰' };
         const earthlyBranches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-        const branchElements = ['水', '土', '木', '木', '土', '火', '火', '土', '金', '金', '土', '水'];
-        
-        // 蔵干
-        const hiddenStems = {
-            '子': ['癸'],
-            '丑': ['己', '癸', '辛'],
-            '寅': ['甲', '丙', '戊'],
-            '卯': ['乙'],
-            '辰': ['戊', '乙', '癸'],
-            '巳': ['丙', '戊', '庚'],
-            '午': ['丁', '己'],
-            '未': ['己', '丁', '乙'],
-            '申': ['庚', '壬', '戊'],
-            '酉': ['辛'],
-            '戌': ['戊', '辛', '丁'],
-            '亥': ['壬', '甲']
+        const branchElements = { '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火', '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水' };
+        const twelveStages = ['胎', '養', '長生', '沐浴', '冠帯', '建禄', '帝旺', '衰', '病', '死', '墓', '絶'];
+
+        const elements = {
+            wood: ['甲', '乙', '寅', '卯'],
+            fire: ['丙', '丁', '巳', '午'],
+            earth: ['戊', '己', '丑', '辰', '未', '戌'],
+            metal: ['庚', '辛', '申', '酉'],
+            water: ['壬', '癸', '子', '亥']
+        };
+
+        const kakkyokuDescriptions = {
+            // Normal Patterns
+            '建禄格': { title: '目的のために頑張りがきく創業者', description: '独立心が旺盛で、率直で向こう気の強い人です。見かけは平静を装っていても負けず嫌い。意志が強く、目的を達するまで張り抜きます。どのような場にあっても自分を中心とした影響力の渦を作ります。' },
+            '月刃格': { title: '芯が強く忍耐力のある謀略家', description: '自尊心が強いにもかかわらず、何を考えているのか分かりにくい人です。心の中では自分を高く見ており、力ずくで勝敗をつけようとする癖があります。負けず嫌いで、巻き返しのチャンスを虎視眈眈とねらいます。' },
+            '食神格': { title: '感覚とロマンに生きる芸術家', description: '気持ちのよいこと、おいしいものが大好きな人です。心は広く大らかで、物事に対して楽観的。華やかな芸術の才能に満ちており、温和さと優雅な雰囲気で人を魅了します。' },
+            '傷官格': { title: '頭の切れの鋭い技術者', description: '技術の習得がとても速く、巧みに新しい技術を学びます。頭の回転が速く、非常にクリエイティブ。感覚的で洗練されたものを好み、センスがよくて、流行に敏感です。' },
+            '偏財格': { title: '社交的で人格円満な商売人', description: '人づき合いがとても好きな人です。人の集まるところが大好きで、社交や人助けのために年中飛び回っています。多くの人を楽ませ、たくさんもてなすことで、大きな価値を生み出そうとします。' },
+            '正財格': { title: '誠実で勤勉に働く銀行マン', description: '誠実で勤勉な人です。質実剛健、まじめで信用されます。経験を重視し、人間関係を大切にする穏健派。地に汗して働くことをいとわず、コツコツと実績を重ねるタイプです。' },
+            '偏官格': { title: '偉業と功績を上げる英雄', description: '正義感が強く、義理と人情に生きる人です。弱い者を助け、竹を割ったようなサッパリとした気性。人生において大きな野心を持ち、戦うことや失敗を恐れず、試練にもよく耐えます。' },
+            '正官格': { title: '礼儀と規律を守る国家公務員', description: '規律を守り、組織のルールに従う人です。高貴で優雅な気質を備えています。知的であり、規則を守って順序よく行動します。どのような環境にあっても、法を守り、自分のことよりも人のために尽くします。' },
+            '偏印格': { title: '臨機応変で時間にとらわれない記者', description: '物質世界よりも、内面の世界を重視する人です。知的好奇心が旺盛で、直感が非常に発達していて、物事の核心をつかむ洞察力があります。束縛されることを嫌い、孤独な時間を楽しむところがあります。' },
+            '印綬格': { title: 'インテリで研究熱心な学者', description: '好奇心が旺盛な人です。聡明で豊富な知識を持ち、控えめです。何よりも学ぶことが好きで、記憶力がよく、様々な知識を吸収します。伝統や、正統な学問、学術を重んじる秀才です。' },
+            // Special Patterns (Tokubetsu Kakkyoku)
+            '従旺格': { title: '我が道を歩む独立独歩の人', description: '自我が非常に強く、自分の信念を貫くことで道が開けます。多くの友人や兄弟に助けられる運を持ち、マイペースにまっすぐ進む人生です。' },
+            '従強格': { title: '知的好奇心旺盛な学究の人', description: '学習力に優れ、学問や研究の世界で才能を発揮します。師や母親のような存在からの教えによって成長し、独自の人生観を築きます。' },
+            '従児格': { title: '芸術的才能に溢れたクリエイター', description: '創造力、表現力、技術力に非常に優れています。芸術、芸能、企画などの分野でクリエイティブな才能を最大限に発揮する人生です。' },
+            '従財格': { title: '人脈と財を築く社交的な商才人', description: '人付き合いがうまく、サービス精神を発揮することで多くの人に好かれ、巨額の富を築く才能があります。お金に極めて恵まれた人生を送ります。' },
+            '従殺格': { title: '組織の中で地位を築く権威の人', description: '忍耐強く、管理能力に優れています。組織の中で序列と秩序を守り、任務を遂行することで、社会的に高い地位と権力を得る人生です。' },
+            '従勢格': { title: '時代の流れに乗る柔軟な世渡り上手', description: '様々な才能に満ち溢れ、周囲の状況に柔軟に対応していくことで幸運を掴みます。富にも地位にも恵まれ、多くの人に好かれる円満な人生です。' },
+        };
+
+        const hiddenStemsPriority = {
+            '子': ['癸', '壬'],   '丑': ['己', '辛', '癸'],   '寅': ['甲', '丙', '戊'],
+            '卯': ['乙', '甲'],   '辰': ['戊', '乙', '癸'],   '巳': ['丙', '庚', '戊'],
+            '午': ['丁', '己'],   '未': ['己', '丁', '乙'],   '申': ['庚', '壬', '戊'],
+            '酉': ['辛', '庚'],   '戌': ['戊', '辛', '丁'],   '亥': ['壬', '甲']
         };
         
-        // 十二運
-        const twelveStages = ['胎', '養', '長生', '沐浴', '冠帯', '建禄', '帝旺', '衰', '病', '死', '墓', '絶'];
-        
-        // 60干支表
-        function getSixtyPillar(index) {
-            const stemIndex = index % 10;
-            const branchIndex = index % 12;
-            return {
-                stem: heavenlyStems[stemIndex],
-                branch: earthlyBranches[branchIndex]
-            };
-        }
-        
-        /**
-         * 二十四節気の節入り日を計算する（概算）
-         * 年ごとに変動する節入り日を計算式で求めることで、より正確な月の区切りを判定します。
-         * @param {number} year - 年
-         * @param {number} month - 月
-         * @returns {{day: number, zodiac: string, name: string}} - 節入り日、その月の地支、節気名
-         */
-        function getSetsuiriDate(year, month) {
-            // 各月の節入りの計算用定数 (C)
-            const setsuiriConstants = {
-                1:  { name: '小寒', C: 5.4055, zodiac: '丑' },
-                2:  { name: '立春', C: 4.15,   zodiac: '寅' },
-                3:  { name: '啓蟄', C: 5.63,   zodiac: '卯' },
-                4:  { name: '清明', C: 4.9,    zodiac: '辰' },
-                5:  { name: '立夏', C: 5.52,   zodiac: '巳' },
-                6:  { name: '芒種', C: 5.8,    zodiac: '午' },
-                7:  { name: '小暑', C: 7.1,    zodiac: '未' },
-                8:  { name: '立秋', C: 7.5,    zodiac: '申' },
-                9:  { name: '白露', C: 7.8,    zodiac: '酉' },
-                10: { name: '寒露', C: 8.3,   zodiac: '戌' },
-                11: { name: '立冬', C: 7.5,   zodiac: '亥' },
-                12: { name: '大雪', C: 7.18,  zodiac: '子' }
-            };
+        const shinsenhyo = {
+            '寅': [{days: 7, stem: '甲'}, {days: 9, stem: '丙'}, {days: 31, stem: '戊'}],
+            '卯': [{days: 10, stem: '甲'}, {days: 31, stem: '乙'}],
+            '辰': [{days: 9, stem: '乙'}, {days: 12, stem: '癸'}, {days: 31, stem: '戊'}],
+            '巳': [{days: 9, stem: '丙'}, {days: 12, stem: '庚'}, {days: 31, stem: '戊'}],
+            '午': [{days: 10, stem: '丙'}, {days: 31, stem: '丁'}],
+            '未': [{days: 9, stem: '丁'}, {days: 12, stem: '乙'}, {days: 31, stem: '己'}],
+            '申': [{days: 10, stem: '庚'}, {days: 13, stem: '壬'}, {days: 31, stem: '戊'}],
+            '酉': [{days: 10, stem: '庚'}, {days: 31, stem: '辛'}],
+            '戌': [{days: 9, stem: '辛'}, {days: 12, stem: '丁'}, {days: 31, stem: '戊'}],
+            '亥': [{days: 10, stem: '戊'}, {days: 31, stem: '甲'}],
+            '子': [{days: 10, stem: '壬'}, {days: 31, stem: '癸'}],
+            '丑': [{days: 9, stem: '癸'}, {days: 12, stem: '辛'}, {days: 31, stem: '己'}]
+        };
 
+        function getSixtyPillar(index) {
+            return { stem: heavenlyStems[index % 10], branch: earthlyBranches[index % 12] };
+        }
+
+        function getSetsuiriDate(year, month) {
+            const setsuiriConstants = {
+                1:  { name: '小寒', C: 5.4055, zodiac: '丑' }, 2:  { name: '立春', C: 4.15,   zodiac: '寅' },
+                3:  { name: '啓蟄', C: 5.63,   zodiac: '卯' }, 4:  { name: '清明', C: 4.9,    zodiac: '辰' },
+                5:  { name: '立夏', C: 5.52,   zodiac: '巳' }, 6:  { name: '芒種', C: 5.8,    zodiac: '午' },
+                7:  { name: '小暑', C: 7.1,    zodiac: '未' }, 8:  { name: '立秋', C: 7.5,    zodiac: '申' },
+                9:  { name: '白露', C: 7.8,    zodiac: '酉' }, 10: { name: '寒露', C: 8.3,   zodiac: '戌' },
+                11: { name: '立冬', C: 7.5,   zodiac: '亥' }, 12: { name: '大雪', C: 7.18,  zodiac: '子' }
+            };
             const termData = setsuiriConstants[month];
             if (!termData) return null;
-            
-            // 節入り日の概算式
             const day = Math.floor(termData.C + 0.2422 * (year - 1900) - Math.floor((year - 1900) / 4));
-            
             return { day: day, zodiac: termData.zodiac, name: termData.name };
         }
 
-        /**
-         * 月柱（天干と地支）を計算する
-         * @param {number} year - 生まれた年
-         * @param {number} month - 生まれた月
-         * @param {number} day - 生まれた日
-         * @param {string} yearStem - 年柱の天干
-         * @returns {{stem: string, branch: string}} - 月柱の天干と地支
-         */
         function getMonthPillar(year, month, day, yearStem) {
-            let targetMonth = month;
-            let targetYear = year;
+            let targetMonth = month, targetYear = year;
             let setsuiri = getSetsuiriDate(targetYear, targetMonth);
-
-            // 生まれた日がその月の節入り日より前の場合、前の月とする
             if (day < setsuiri.day) {
                 targetMonth = month === 1 ? 12 : month - 1;
-                // 1月から12月に戻る場合は、年も1年戻す
-                if (month === 1) {
-                    targetYear--;
-                }
+                if (month === 1) targetYear--;
                 setsuiri = getSetsuiriDate(targetYear, targetMonth);
             }
-            
             const monthBranch = setsuiri.zodiac;
-            
-            // 年干から月干を求める（年干から月干の求め方）
-            // 甲己の年→丙寅, 乙庚の年→戊寅, 丙辛の年→庚寅, 丁壬の年→壬寅, 戊癸の年→甲寅
             const yearStemIndex = heavenlyStems.indexOf(yearStem);
-            const firstMonthStemIndexMap = [2, 4, 6, 8, 0]; // 丙, 戊, 庚, 壬, 甲 (甲己, 乙庚, 丙辛, 丁壬, 戊癸 の順)
-            
+            const firstMonthStemIndexMap = [2, 4, 6, 8, 0];
             const firstMonthStemIndex = firstMonthStemIndexMap[yearStemIndex % 5];
-            
-            const toraMonthIndex = 2; // earthlyBranchesでの'寅'のインデックス
+            const toraMonthIndex = 2;
             const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
-            
-            // '寅'の月からのオフセットを計算
             let monthOffset = monthBranchIndex - toraMonthIndex;
-            if (monthOffset < 0) {
-                monthOffset += 12;
-            }
-            
+            if (monthOffset < 0) monthOffset += 12;
             const monthStemIndex = (firstMonthStemIndex + monthOffset) % 10;
             const monthStem = heavenlyStems[monthStemIndex];
-            
             return { stem: monthStem, branch: monthBranch };
         }
-        
-        // 十神判定
+
         function getTenGod(dayStem, targetStem) {
+            if (!dayStem || !targetStem) return '';
             const dayIndex = heavenlyStems.indexOf(dayStem);
             const targetIndex = heavenlyStems.indexOf(targetStem);
-            const dayElement = stemElements[dayIndex];
-            const targetElement = stemElements[targetIndex];
-            const dayYinYang = stemYinYang[dayIndex];
-            const targetYinYang = stemYinYang[targetIndex];
-            
-            if (dayElement === targetElement) {
-                return dayYinYang === targetYinYang ? '比肩' : '劫財';
-            }
-            
+            if(dayIndex === -1 || targetIndex === -1) return '';
+            const dayElement = stemElements[dayStem];
+            const targetElement = stemElements[targetStem];
+            const dayYinYang = stemYinYang[dayStem];
+            const targetYinYang = stemYinYang[targetStem];
+            if (dayElement === targetElement) return dayYinYang === targetYinYang ? '比肩' : '劫財';
             const elementCycle = ['木', '火', '土', '金', '水'];
             const dayElementIndex = elementCycle.indexOf(dayElement);
             const targetElementIndex = elementCycle.indexOf(targetElement);
-            
-            if ((dayElementIndex + 1) % 5 === targetElementIndex) {
-                return dayYinYang === targetYinYang ? '食神' : '傷官';
-            }
-            if ((dayElementIndex + 2) % 5 === targetElementIndex) {
-                return dayYinYang !== targetYinYang ? '正財' : '偏財';
-            }
-            if ((dayElementIndex + 3) % 5 === targetElementIndex) {
-                return dayYinYang !== targetYinYang ? '正官' : '偏官';
-            }
-            if ((dayElementIndex + 4) % 5 === targetElementIndex) {
-                return dayYinYang !== targetYinYang ? '印綬' : '偏印';
-            }
-            
+            if ((dayElementIndex + 1) % 5 === targetElementIndex) return dayYinYang === targetYinYang ? '食神' : '傷官';
+            if ((dayElementIndex + 2) % 5 === targetElementIndex) return dayYinYang !== targetYinYang ? '正財' : '偏財';
+            if ((dayElementIndex + 3) % 5 === targetElementIndex) return dayYinYang !== targetYinYang ? '正官' : '偏官';
+            if ((dayElementIndex + 4) % 5 === targetElementIndex) return dayYinYang !== targetYinYang ? '印綬' : '偏印';
             return '';
         }
-        
-        // 十二運判定
+
         function getTwelveStage(stem, branch) {
             const stemIndex = heavenlyStems.indexOf(stem);
             const branchIndex = earthlyBranches.indexOf(branch);
-            const element = stemElements[stemIndex];
-            
+            if(stemIndex === -1 || branchIndex === -1) return '';
+            const element = stemElements[stem];
             const stageMap = {
-                '木': [11, 6, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                '火': [2, 9, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0],
-                '土': [5, 0, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3],
-                '金': [8, 3, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6],
+                '木': [11, 6, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], '火': [2, 9, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0],
+                '土': [5, 0, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3], '金': [8, 3, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6],
                 '水': [11, 6, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             };
-            
             const stageIndex = stageMap[element][branchIndex];
             return twelveStages[stageIndex];
         }
-        
-        // セレクトボックスを初期化
+
         function initializeSelects() {
-            const stemSelects = document.querySelectorAll('.stem-select');
-            const branchSelects = document.querySelectorAll('.branch-select');
-            
-            stemSelects.forEach(select => {
+            document.querySelectorAll('.stem-select').forEach(select => {
                 select.innerHTML = '<option value="">-</option>';
-                heavenlyStems.forEach(stem => {
-                    const option = document.createElement('option');
-                    option.value = stem;
-                    option.textContent = stem;
-                    select.appendChild(option);
-                });
+                heavenlyStems.forEach(stem => select.add(new Option(stem, stem)));
             });
-            
-            branchSelects.forEach(select => {
+            document.querySelectorAll('.branch-select').forEach(select => {
                 select.innerHTML = '<option value="">-</option>';
-                earthlyBranches.forEach(branch => {
-                    const option = document.createElement('option');
-                    option.value = branch;
-                    option.textContent = branch;
-                    select.appendChild(option);
-                });
+                earthlyBranches.forEach(branch => select.add(new Option(branch, branch)));
             });
         }
-        
-        // ページロード時にセレクトボックスを初期化
-        window.onload = function() {
-            initializeSelects();
-        };
-        
-        function calculate() {
-            const birthDate = new Date(document.getElementById('birthDate').value);
-            const birthTime = document.getElementById('birthTime').value;
-            const gender = document.getElementById('gender').value;
-            const [hour, minute] = birthTime.split(':').map(Number);
-            
-            const year = birthDate.getFullYear();
-            const month = birthDate.getMonth() + 1;
-            const day = birthDate.getDate();
-            
-            // 1. 年の始まりを立春で判定
-            const risshun = getSetsuiriDate(year, 2); // 2月(寅の月)の節入り=立春
-            const risshunDate = new Date(year, 1, risshun.day); // 比較用のDateオブジェクト
-            
-            const astrologicalYear = birthDate < risshunDate ? year - 1 : year;
-            
-            // 2. 年柱の計算
-            // 四柱推命の年(astrologicalYear)を元に計算
-            const yearIndex = (astrologicalYear - 1864) % 60;
-            const yearPillar = getSixtyPillar(yearIndex);
-            
-            // 3. 月柱の計算
-            const monthPillar = getMonthPillar(year, month, day, yearPillar.stem);
 
-            // 4. 日柱計算
+        window.onload = initializeSelects;
+
+        function calculate() {
+            const birthDateStr = document.getElementById('birthDate').value;
+            const birthTime = document.getElementById('birthTime').value;
+            window.currentBirthDate = new Date(`${birthDateStr}T${birthTime}`);
+
+            const year = window.currentBirthDate.getFullYear(), month = window.currentBirthDate.getMonth() + 1, day = window.currentBirthDate.getDate();
+
+            const risshun = getSetsuiriDate(year, 2);
+            const risshunDate = new Date(year, 1, risshun.day);
+            const astrologicalYear = window.currentBirthDate < risshunDate ? year - 1 : year;
+            const yearPillar = getSixtyPillar((astrologicalYear - 1864) % 60);
+            const monthPillar = getMonthPillar(year, month, day, yearPillar.stem);
             const baseDate = new Date(1900, 0, 1);
-            const daysDiff = Math.floor((birthDate - baseDate) / (1000 * 60 * 60 * 24));
-            // 1900年1月1日は甲戌(インデックス10)なので、オフセットを加えて計算します
-            const dayIndex = (daysDiff + 10) % 60;
-            const dayPillar = getSixtyPillar(dayIndex);
+            const daysDiff = Math.floor((window.currentBirthDate - baseDate) / (1000 * 60 * 60 * 24));
+            const dayPillar = getSixtyPillar((daysDiff + 10) % 60);
             
-            // 5. 時柱計算
+            const [hour, minute] = birthTime.split(':').map(Number);
             const hourBranchIndex = Math.floor((hour + 1) / 2) % 12;
             const hourBranch = earthlyBranches[hourBranchIndex];
             const dayStemIndex = heavenlyStems.indexOf(dayPillar.stem);
             const hourStemIndex = ((dayStemIndex % 5) * 2 + hourBranchIndex) % 10;
             const hourStem = heavenlyStems[hourStemIndex];
-            
-            // 命式表示（セレクトボックスに値を設定）
+
             document.getElementById('yearStem').value = yearPillar.stem;
             document.getElementById('yearBranch').value = yearPillar.branch;
             document.getElementById('monthStem').value = monthPillar.stem;
@@ -519,95 +462,370 @@
             document.getElementById('dayBranch').value = dayPillar.branch;
             document.getElementById('hourStem').value = hourStem;
             document.getElementById('hourBranch').value = hourBranch;
+
+            window.currentGender = document.getElementById('gender').value;
             
-            // 性別と生年月日情報をグローバルに保存（大運計算で使用）
-            window.currentGender = gender;
-            window.currentBirthDate = new Date(document.getElementById('birthDate').value + 'T' + document.getElementById('birthTime').value);
-            
-            // 分析を更新
             updateAnalysis();
-            
             document.getElementById('resultSection').style.display = 'block';
         }
+
+        // --- Start of Kango/Shigo Logic ---
         
-        // 天干・地支が変更されたときに呼ばれる関数
-        function updateAnalysis() {
-            const yearStem = document.getElementById('yearStem').value;
-            const monthStem = document.getElementById('monthStem').value;
-            const dayStem = document.getElementById('dayStem').value;
-            const hourStem = document.getElementById('hourStem').value;
-            
-            const yearBranch = document.getElementById('yearBranch').value;
-            const monthBranch = document.getElementById('monthBranch').value;
-            const dayBranch = document.getElementById('dayBranch').value;
-            const hourBranch = document.getElementById('hourBranch').value;
-            
-            if (!dayStem) return; // 日主が選択されていない場合は何もしない
-            
-            // 蔵干表示
-            if (yearBranch) document.getElementById('yearHidden').textContent = hiddenStems[yearBranch].join('・');
-            if (monthBranch) document.getElementById('monthHidden').textContent = hiddenStems[monthBranch].join('・');
-            if (dayBranch) document.getElementById('dayHidden').textContent = hiddenStems[dayBranch].join('・');
-            if (hourBranch) document.getElementById('hourHidden').textContent = hiddenStems[hourBranch].join('・');
-            
-            // 十神表示
-            if (yearStem) document.getElementById('yearGod').textContent = getTenGod(dayStem, yearStem);
-            if (monthStem) document.getElementById('monthGod').textContent = getTenGod(dayStem, monthStem);
-            if (hourStem) document.getElementById('hourGod').textContent = getTenGod(dayStem, hourStem);
-            
-            // 十二運表示
-            if (yearStem && yearBranch) document.getElementById('year12').textContent = getTwelveStage(yearStem, yearBranch);
-            if (monthStem && monthBranch) document.getElementById('month12').textContent = getTwelveStage(monthStem, monthBranch);
-            if (dayStem && dayBranch) document.getElementById('day12').textContent = getTwelveStage(dayStem, dayBranch);
-            if (hourStem && hourBranch) document.getElementById('hour12').textContent = getTwelveStage(hourStem, hourBranch);
-            
-            // 分析実行
-            analyzeDestiny(dayStem, [yearStem, monthStem, dayStem, hourStem],
-                          [yearBranch, monthBranch, dayBranch, hourBranch]);
-            
-            // 大運も計算
-            if (window.currentGender && window.currentBirthDate) {
-                calculateDaiunn();
+        const isKangoPair = (s1, s2) => {
+            const pairs = [['甲', '己'], ['乙', '庚'], ['丙', '辛'], ['丁', '壬'], ['戊', '癸']];
+            return pairs.some(p => (p[0] === s1 && p[1] === s2) || (p[0] === s2 && p[1] === s1));
+        };
+
+        const isShichuPair = (b1, b2) => {
+            const pairs = [['子', '午'], ['丑', '未'], ['寅', '申'], ['卯', '酉'], ['辰', '戌'], ['巳', '亥']];
+            return pairs.some(p => (p[0] === b1 && p[1] === b2) || (p[0] === b2 && p[1] === b1));
+        };
+
+        const shigoPairs = [
+            { b1: '子', b2: '丑', element: '土', requiredStems: ['戊', '己', '丙', '丁'] },
+            { b1: '亥', b2: '寅', element: '木', requiredStems: ['甲', '乙', '壬', '癸'] },
+            { b1: '卯', b2: '戌', element: '火', requiredStems: ['丙', '丁', '甲', '乙'] },
+            { b1: '辰', b2: '酉', element: '金', requiredStems: ['庚', '辛', '戊', '己'] },
+            { b1: '巳', b2: '申', element: '水', requiredStems: ['壬', '癸', '庚', '辛'] },
+            { b1: '午', b2: '未', element: '火', requiredStems: ['丙', '丁', '甲', '乙'] }
+        ];
+
+        const isShigoPair = (b1, b2) => {
+            return shigoPairs.some(p => (p.b1 === b1 && p.b2 === b2) || (p.b1 === b2 && p.b2 === b1));
+        };
+
+
+        function checkKango(stems, branches) {
+            let transformedStems = [...stems];
+            let messages = [];
+
+            const monthBranch = branches[1]; // 月支
+            const isKangoMD = isKangoPair(stems[1], stems[2]); // 月干-日干
+            const isKangoDH = isKangoPair(stems[2], stems[3]); // 日干-時干
+
+            // 妬合 check: 日干が月干と時干に挟まれる
+            if (isKangoMD && isKangoDH) {
+                messages.push(`日干が月干と時干の両方から干合される妬合（とうごう）のため、干合は変化しません。`);
+                return { transformedStems, messages }; // 妬合の場合は以降の干合は成立しない
             }
+
+            let kangoedIndices = new Set();
+
+            // 月干-日干 の干合をチェック
+            if (isKangoMD) {
+                const sA = stems[1], sB = stems[2];
+                let transformed = false;
+                // ... (transformation logic remains the same)
+                if ((sA === '甲' && sB === '己') || (sA === '己' && sB === '甲')) {
+                    if (['土', '火'].includes(branchElements[monthBranch])) {
+                        transformedStems[stems.indexOf('甲')] = '戊';
+                        messages.push(`月干-日干で甲己干合が成立し、土に変化します。`);
+                        transformed = true;
+                    }
+                } // ... other else-if blocks
+                
+                if (transformed) {
+                    kangoedIndices.add(1); kangoedIndices.add(2);
+                }
+            }
+
+            // 日干-時干 の干合をチェック (月干-日干で干合していない場合のみ)
+            if (isKangoDH && !kangoedIndices.has(2)) {
+                 const sA = stems[2], sB = stems[3];
+                 let transformed = false;
+                 // ... (transformation logic remains the same)
+                if ((sA === '丙' && sB === '辛') || (sA === '辛' && sB === '丙')) {
+                    if (['水', '金'].includes(branchElements[monthBranch]) || monthBranch === '辰') {
+                        transformedStems[stems.indexOf('丙')] = '壬';
+                        transformedStems[stems.indexOf('辛')] = '癸';
+                        messages.push(`日干-時干で丙辛干合が成立し、水に変化します。`);
+                        transformed = true;
+                    }
+                } // ... other else-if blocks
+            }
+
+            return { transformedStems, messages };
+        }
+
+        function checkShigo(stems, branches) {
+            let strengthenedElement = null;
+            let messages = [];
+        
+            const isShigoYM = isShigoPair(branches[0], branches[1]);
+            const isShigoMD = isShigoPair(branches[1], branches[2]);
+            const isShigoDH = isShigoPair(branches[2], branches[3]);
+        
+            const monthIsTogo = isShigoYM && isShigoMD;
+            const dayIsTogo = isShigoMD && isShigoDH;
+        
+            const checks = [
+                { key: 'YM', isValid: isShigoYM && !monthIsTogo, idxA: 0, idxB: 1, info: '年支-月支' },
+                { key: 'MD', isValid: isShigoMD && !monthIsTogo && !dayIsTogo, idxA: 1, idxB: 2, info: '月支-日支' },
+                { key: 'DH', isValid: isShigoDH && !dayIsTogo, idxA: 2, idxB: 3, info: '日支-時支' }
+            ];
+
+            if (monthIsTogo) messages.push(`月支が年支と日支に挟まれる妬合のため、年支-月支と月支-日支の支合は変化しません。`);
+            if (dayIsTogo && !monthIsTogo) messages.push(`日支が月支と時支に挟まれる妬合のため、月支-日支と日支-時支の支合は変化しません。`);
+
+            for (const check of checks) {
+                if (!check.isValid) continue;
+        
+                const bA = branches[check.idxA], bB = branches[check.idxB];
+                const sA = stems[check.idxA], sB = stems[check.idxB];
+        
+                const prevBranch = branches[check.idxA - 1];
+                const nextBranch = branches[check.idxB + 1];
+                if ((prevBranch && isShichuPair(bA, prevBranch)) || (nextBranch && isShichuPair(bB, nextBranch))) {
+                    messages.push(`${check.info}で${bA}${bB}の支合がありますが、隣接する地支と支冲が成立するため変化しません。`);
+                    continue;
+                }
+        
+                if (isKangoPair(sA, sB)) {
+                    messages.push(`${check.info}で${bA}${bB}の支合がありますが、天干が干合しているため変化しません。`);
+                    continue;
+                }
+        
+                const pairInfo = shigoPairs.find(p => (p.b1 === bA && p.b2 === bB) || (p.b1 === bB && p.b2 === bA));
+                if (pairInfo && (pairInfo.requiredStems.includes(sA) || pairInfo.requiredStems.includes(sB))) {
+                    strengthenedElement = pairInfo.element;
+                    messages.push(`${check.info}で${bA}${bB}支合が成立し、${pairInfo.element}の力量が強まります。`);
+                    break; 
+                } else if (pairInfo) {
+                     messages.push(`${check.info}で${bA}${bB}支合がありますが、変化の条件を満たさないため力量は変化しません。`);
+                }
+            }
+        
+            return { strengthenedElement, messages };
         }
         
-        function analyzeDestiny(dayStem, stems, branches) {
-            const dayStemIndex = heavenlyStems.indexOf(dayStem);
-            const dayElement = stemElements[dayStemIndex];
-            const dayYinYang = stemYinYang[dayStemIndex];
+        // --- End of Kango/Shigo Logic ---
+
+
+        function updateAnalysis() {
+            let stemsUI = [
+                document.getElementById('hourStem').value,
+                document.getElementById('dayStem').value,
+                document.getElementById('monthStem').value,
+                document.getElementById('yearStem').value
+            ];
+            let branchesUI = [
+                document.getElementById('hourBranch').value,
+                document.getElementById('dayBranch').value,
+                document.getElementById('monthBranch').value,
+                document.getElementById('yearBranch').value
+            ];
             
-            // 五行バランス計算
-            const elementCount = {
-                '木': 0, '火': 0, '土': 0, '金': 0, '水': 0
+            if (stemsUI.includes('') || branchesUI.includes('')) return;
+            
+            // Order for analysis functions is [year, month, day, hour]
+            const sortedStems = [stemsUI[3], stemsUI[2], stemsUI[1], stemsUI[0]];
+            const sortedBranches = [branchesUI[3], branchesUI[2], branchesUI[1], branchesUI[0]];
+
+            // Check for transformations based on original chart
+            // Note: Kango should be checked before Shigo as Shigo depends on final stem values
+            const kangoResult = checkKango(sortedStems, sortedBranches);
+            let transformedStems = kangoResult.transformedStems;
+            const shigoResult = checkShigo(transformedStems, sortedBranches);
+
+
+            // Update UI selects if stems were transformed by Kango
+            if (JSON.stringify(transformedStems) !== JSON.stringify(sortedStems)) {
+                document.getElementById('yearStem').value = transformedStems[0];
+                document.getElementById('monthStem').value = transformedStems[1];
+                document.getElementById('dayStem').value = transformedStems[2];
+                document.getElementById('hourStem').value = transformedStems[3];
+            }
+            
+            const dayStem = transformedStems[2];
+            if (!dayStem) return;
+
+            // Display Zokan (蔵干)
+            document.getElementById('hourHidden').textContent = hiddenStemsPriority[sortedBranches[3]]?.join('・') || '';
+            document.getElementById('dayHidden').textContent = hiddenStemsPriority[sortedBranches[2]]?.join('・') || '';
+            document.getElementById('monthHidden').textContent = hiddenStemsPriority[sortedBranches[1]]?.join('・') || '';
+            document.getElementById('yearHidden').textContent = hiddenStemsPriority[sortedBranches[0]]?.join('・') || '';
+
+            // Display Tsuhensei for Zokan (蔵干通変星)
+            const hiddenGods = [sortedBranches[3], sortedBranches[2], sortedBranches[1], sortedBranches[0]].map(branch => {
+                const hidden = hiddenStemsPriority[branch];
+                return hidden ? hidden.map(hStem => getTenGod(dayStem, hStem)).join('・') : '';
+            });
+            // Order is hour, day, month, year for display
+            document.getElementById('hourHiddenGod').textContent = hiddenGods[3];
+            document.getElementById('dayHiddenGod').textContent = hiddenGods[2];
+            document.getElementById('monthHiddenGod').textContent = hiddenGods[1];
+            document.getElementById('yearHiddenGod').textContent = hiddenGods[0];
+
+
+            // Display Tsuhensei for Tenkan (天干通変星)
+            document.getElementById('hourGod').textContent = getTenGod(dayStem, transformedStems[3]);
+            document.getElementById('monthGod').textContent = getTenGod(dayStem, transformedStems[1]);
+            document.getElementById('yearGod').textContent = getTenGod(dayStem, transformedStems[0]);
+
+            // Display 12 Un (十二運)
+            document.getElementById('hour12').textContent = getTwelveStage(transformedStems[3], sortedBranches[3]);
+            document.getElementById('day12').textContent = getTwelveStage(transformedStems[2], sortedBranches[2]);
+            document.getElementById('month12').textContent = getTwelveStage(transformedStems[1], sortedBranches[1]);
+            document.getElementById('year12').textContent = getTwelveStage(transformedStems[0], sortedBranches[0]);
+            
+            analyzeDestiny(dayStem, transformedStems, sortedBranches, kangoResult.messages, shigoResult);
+            
+            if (window.currentGender && window.currentBirthDate) calculateDaiunn();
+        }
+        
+        function getSpecialKakkyoku(strengthResult, dayStem, stems, branches) {
+            const allStemsForGods = [];
+            allStemsForGods.push(stems[0], stems[1], stems[3]); 
+            
+            branches.forEach(b => {
+                if (hiddenStemsPriority[b]) {
+                    allStemsForGods.push(...hiddenStemsPriority[b]);
+                }
+            });
+
+            const tenGods = allStemsForGods.map(s => getTenGod(dayStem, s)).filter(g => g);
+
+            if (strengthResult.includes('極身強')) {
+                const juoCount = tenGods.filter(g => g === '比肩' || g === '劫財').length;
+                const jukyoCount = tenGods.filter(g => g === '偏印' || g === '印綬').length;
+
+                if (juoCount >= jukyoCount) {
+                    return '従旺格';
+                } else {
+                    return '従強格';
+                }
+            }
+
+            if (strengthResult.includes('極身弱')) {
+                const jujiCount = tenGods.filter(g => g === '食神' || g === '傷官').length;
+                const juzaiCount = tenGods.filter(g => g === '偏財' || g === '正財').length;
+                const jusatsuCount = tenGods.filter(g => g === '偏官' || g === '正官').length;
+                
+                if (jujiCount > 0 && juzaiCount > 0 && jusatsuCount > 0) {
+                     return '従勢格';
+                }
+
+                const maxCount = Math.max(jujiCount, juzaiCount, jusatsuCount);
+                if (maxCount === 0) return '特別格局（分類不能）';
+                if (maxCount === jujiCount) return '従児格';
+                if (maxCount === juzaiCount) return '従財格';
+                if (maxCount === jusatsuCount) return '従殺格';
+            }
+            
+            return '特別格局（判定不能）';
+        }
+
+        function getNormalKakkyoku(dayStem, stems, branches, birthDate) {
+            const yearStem = stems[0], monthStem = stems[1], hourStem = stems[3];
+            const monthBranch = branches[1];
+
+            const kenrokuConditions = { '甲': '寅', '乙': '卯', '丙': '巳', '丁': '午', '戊': '巳', '己': '午', '庚': '申', '辛': '酉', '壬': '亥', '癸': '子' };
+            if (kenrokuConditions[dayStem] === monthBranch) return '建禄格';
+            const getsurinConditions = { '甲': '卯', '丙': '午', '戊': '午', '庚': '酉', '壬': '子' };
+            if (getsurinConditions[dayStem] === monthBranch) return '月刃格';
+
+            const monthHiddenStems = hiddenStemsPriority[monthBranch];
+            if (!monthHiddenStems) return '判定不能';
+
+            const getElement = (stem) => stem ? stemElements[stem] : null;
+            
+            const findKakkyokuFromHidden = (hiddenStem) => {
+                const god = getTenGod(dayStem, hiddenStem);
+                if (god === '比肩') return '建禄格';
+                if (god === '劫財') return '月刃格';
+                return god ? god + '格' : '判定不能';
             };
+
+            if (monthStem) {
+                for (const hidden of monthHiddenStems) {
+                    if (getElement(hidden) === getElement(monthStem)) return findKakkyokuFromHidden(hidden);
+                }
+            }
             
+            let foundInYearHour = null;
+            for (const hidden of monthHiddenStems) {
+                 if ((yearStem && getElement(hidden) === getElement(yearStem)) || (hourStem && getElement(hidden) === getElement(hourStem))) {
+                    foundInYearHour = hidden;
+                    break;
+                 }
+            }
+            if(foundInYearHour) return findKakkyokuFromHidden(foundInYearHour);
+            
+            const year = birthDate.getFullYear(), month = birthDate.getMonth() + 1, day = birthDate.getDate();
+            let astroYear = year, astroMonth = month;
+            let currentSetsuiri = getSetsuiriDate(astroYear, astroMonth);
+            
+            if(day < currentSetsuiri.day) {
+                astroMonth = month === 1 ? 12 : month - 1;
+                if (month === 1) astroYear--;
+                currentSetsuiri = getSetsuiriDate(astroYear, astroMonth);
+            }
+            
+            const daysPassed = day - currentSetsuiri.day + 1;
+            const shinsenhyoRules = shinsenhyo[monthBranch];
+            
+            if(shinsenhyoRules){
+                for(const rule of shinsenhyoRules){
+                    if(daysPassed <= rule.days){
+                        const chosenStem = rule.stem;
+                        return findKakkyokuFromHidden(chosenStem);
+                    }
+                }
+            }
+
+            return '判定不能';
+        }
+
+        function analyzeDestiny(dayStem, stems, branches, kangoMessages, shigoResult) {
+            const elementCount = {'木': 0, '火': 0, '土': 0, '金': 0, '水': 0};
             stems.forEach(stem => {
-                const index = heavenlyStems.indexOf(stem);
-                if (index !== -1) {
-                    elementCount[stemElements[index]]++;
-                }
+                if (stem) elementCount[stemElements[stem]]++;
             });
-            
             branches.forEach(branch => {
-                const index = earthlyBranches.indexOf(branch);
-                if (index !== -1) {
-                    elementCount[branchElements[index]]++;
-                }
+                if (branch) elementCount[branchElements[branch]]++;
             });
+
+            // Reflect Shigo result on element balance
+            if (shigoResult.strengthenedElement) {
+                elementCount[shigoResult.strengthenedElement] += 2; // Add weight to the strengthened element
+            }
+
+            const dayElement = stemElements[dayStem];
+            const dayYinYang = stemYinYang[dayStem];
+            const strength = judgeStrength(dayStem, stems, branches);
             
-            let analysisHTML = '';
+            let kakkyoku;
+            if (strength.includes('極身強') || strength.includes('極身弱')) {
+                kakkyoku = getSpecialKakkyoku(strength, dayStem, stems, branches);
+            } else {
+                kakkyoku = getNormalKakkyoku(dayStem, stems, branches, window.currentBirthDate);
+            }
             
-            // 日主の説明
-            analysisHTML += `
+            const kakkyokuInfo = kakkyokuDescriptions[kakkyoku] || { title: '判定不能', description: 'あなたの価値観の源となる格局を特定できませんでした。' };
+
+            let transformationHTML = '';
+            const allMessages = [...kangoMessages, ...shigoResult.messages].filter((v, i, a) => a.indexOf(v) === i); // Unique messages
+            if (allMessages.length > 0) {
+                transformationHTML += `<div class="analysis-item">
+                    <div class="analysis-title">命式の変化</div>`;
+                 allMessages.forEach(msg => {
+                    const type = msg.includes("干合") ? "【干合】" : "【支合】";
+                    transformationHTML += `<div><span class="transformed">${type}</span>${msg}</div>`;
+                 });
+                transformationHTML += `</div>`;
+            }
+
+            let analysisHTML = transformationHTML + `
                 <div class="analysis-item">
                     <div class="analysis-title">日主（あなたの本質）</div>
                     <div>${dayStem}（${dayYinYang}の${dayElement}）</div>
                     <div>${getDayStemDescription(dayStem)}</div>
                 </div>
-            `;
-            
-            // 五行バランス
-            analysisHTML += `
+                 <div class="analysis-item">
+                    <div class="analysis-title">格局（あなたの価値観）</div>
+                    <div><strong>${kakkyoku}</strong>：${kakkyokuInfo.title}</div>
+                    <div style="margin-top: 8px; line-height: 1.6;">${kakkyokuInfo.description}</div>
+                </div>
                 <div class="analysis-item">
                     <div class="analysis-title">五行バランス</div>
                     <div class="element-balance">
@@ -617,270 +835,196 @@
                         <div class="element-bar metal">金: ${elementCount['金']}</div>
                         <div class="element-bar water">水: ${elementCount['水']}</div>
                     </div>
-                    <div style="margin-top: 10px;">${getElementAnalysis(dayElement, elementCount)}</div>
                 </div>
-            `;
-            
-            // 身強・身弱判定
-            const strength = judgeStrength(dayStem, stems, branches, elementCount);
-            analysisHTML += `
                 <div class="analysis-item">
                     <div class="analysis-title">身強・身弱判定</div>
                     <div>${strength}</div>
                 </div>
-            `;
-            
-            // 総合運勢
-            analysisHTML += `
                 <div class="analysis-item">
                     <div class="analysis-title">総合運勢</div>
-                    <div>${getOverallFortune(dayStem, strength, elementCount)}</div>
-                </div>
-            `;
-            
+                    <div style="line-height: 1.6;">${getOverallFortune(dayStem, strength, elementCount)}</div>
+                </div>`;
             document.getElementById('analysisResult').innerHTML = analysisHTML;
         }
-        
+
+        function judgeStrength(dayStem, stems, branches) {
+            if (!dayStem || branches.some(b => !b) || stems.some(s => !s)) {
+                return '命式が不完全なため判定できません。';
+            }
+
+            const elementCycle = ['木', '火', '土', '金', '水'];
+            const getElement = (name) => {
+                const stemEl = stemElements[name];
+                if (stemEl) return stemEl;
+                const branchEl = branchElements[name];
+                if (branchEl) return branchEl;
+                return null;
+            };
+
+            const dayElement = getElement(dayStem);
+            const monthBranch = branches[1];
+            const monthElement = getElement(monthBranch);
+
+            const getRelationship = (baseEl, targetEl) => {
+                if (!baseEl || !targetEl) return 'none';
+                if (baseEl === targetEl) return 'same';
+                const baseIndex = elementCycle.indexOf(baseEl);
+                const targetIndex = elementCycle.indexOf(targetEl);
+                if ((baseIndex + 1) % 5 === targetIndex) return 'produces';
+                if ((baseIndex + 2) % 5 === targetIndex) return 'attacks';
+                if ((baseIndex + 3) % 5 === targetIndex) return 'attacked_by';
+                if ((baseIndex + 4) % 5 === targetIndex) return 'produced_by';
+                return 'none';
+            };
+            
+            const isTokurei = ['same', 'produced_by'].includes(getRelationship(dayElement, monthElement));
+            const tokuchiCount = [branches[0], branches[2], branches[3]].filter(b => ['same', 'produced_by'].includes(getRelationship(dayElement, getElement(b)))).length;
+            const tokujoCount = [stems[0], stems[1], stems[3]].filter(s => ['same', 'produced_by'].includes(getRelationship(dayElement, getElement(s)))).length;
+            
+            const isShitsurei = ['produces', 'attacks', 'attacked_by'].includes(getRelationship(dayElement, monthElement));
+            const weakeningStems = [stems[0], stems[1], stems[3]].filter(s => ['produces', 'attacks', 'attacked_by'].includes(getRelationship(dayElement, getElement(s)))).length;
+            const weakeningBranches = [branches[0], branches[2], branches[3]].filter(b => ['produces', 'attacks', 'attacked_by'].includes(getRelationship(dayElement, getElement(b)))).length;
+
+            if (isTokurei && tokujoCount >= 2 && tokuchiCount >= 2) {
+                return '極身強：日主の力が極めて強く、非常に大きなエネルギーを持っています。自己の意志を貫く強さがありますが、強引になりすぎないよう周囲との調和を意識することが成功の鍵です。';
+            }
+            if (isShitsurei && weakeningStems >= 2 && (weakeningBranches-1) >= 3) {
+                return '極身弱：日主の力が極めて弱く、繊細で周囲の影響を受けやすいです。自分を支えてくれる環境や人間関係を何よりも大切に。無理をせず、自分のペースで着実に進むことで才能が開花します。';
+            }
+
+            const checkKaikyoku = () => {
+                const branchSet = new Set(branches);
+                const combinations = [
+                    { name: '三方木局', branches: ['寅', '卯', '辰'], element: '木' }, { name: '三方火局', branches: ['巳', '午', '未'], element: '火' },
+                    { name: '三方金局', branches: ['申', '酉', '戌'], element: '金' }, { name: '三方水局', branches: ['亥', '子', '丑'], element: '水' },
+                    { name: '三合木局', branches: ['亥', '卯', '未'], element: '木' }, { name: '三合火局', branches: ['寅', '午', '戌'], element: '火' },
+                    { name: '三合金局', branches: ['巳', '酉', '丑'], element: '金' }, { name: '三合水局', branches: ['申', '子', '辰'], element: '水' },
+                ];
+                for (const comb of combinations) {
+                    if (comb.branches.every(b => branchSet.has(b))) return { found: true, element: comb.element, includesMonthBranch: comb.branches.includes(monthBranch) };
+                }
+                return { found: false };
+            };
+            const kaikyokuResult = checkKaikyoku();
+
+            let isMikyo = false;
+            const conditionsMet = [isTokurei, tokuchiCount > 0, tokujoCount > 0];
+            const numConditionsMet = conditionsMet.filter(Boolean).length;
+            
+            if (numConditionsMet >= 2) {
+                if (!conditionsMet[0] && conditionsMet[1] && conditionsMet[2]) { 
+                    if (tokuchiCount + tokujoCount >= 3) isMikyo = true;
+                } else {
+                    isMikyo = true;
+                }
+            }
+            if (!isMikyo && kaikyokuResult.found && ['same', 'produced_by'].includes(getRelationship(dayElement, kaikyokuResult.element)) && (kaikyokuResult.includesMonthBranch || (!kaikyokuResult.includesMonthBranch && isTokurei))) isMikyo = true;
+            
+            if (isMikyo) return '身強：日主の力が強く、行動力と自己肯定感が高いタイプです。リーダーシップを発揮できますが、時には他者の意見に耳を傾ける柔軟性も持つことで、より大きな成功を掴めます。';
+            return '身弱：協調性があり、周囲の状況に合わせて柔軟に対応できるタイプです。サポート役やチームで動くことで力を発揮します。自信を持ち、信頼できる仲間との連携を大切にしましょう。';
+        }
+
         function getDayStemDescription(stem) {
             const descriptions = {
-                '甲': '大樹のような存在感があり、リーダーシップに優れています。正直で真っ直ぐな性格です。',
-                '乙': '草花のような柔軟性があり、協調性に富んでいます。繊細で美的感覚に優れています。',
-                '丙': '太陽のような明るさがあり、情熱的で行動力があります。人を惹きつける魅力があります。',
-                '丁': 'ろうそくの火のような優しい光で、周囲を温かく照らします。思慮深く献身的です。',
-                '戊': '山のようにどっしりとした安定感があり、信頼される存在です。包容力があります。',
-                '己': '大地のような母性的な優しさがあり、育む力に優れています。堅実で真面目です。',
-                '庚': '刀剣のような鋭さがあり、決断力と実行力に優れています。正義感が強いです。',
-                '辛': '宝石のような繊細さと美しさがあり、センスと感性に優れています。完璧主義的です。',
-                '壬': '大海のような包容力があり、知識欲旺盛で適応力があります。自由を愛します。',
-                '癸': '雨露のような潤いを与える存在で、知恵と直感力に優れています。神秘的な魅力があります。'
+                '甲': '大樹のような存在感があり、リーダーシップに優れています。正直で真っ直ぐな性格です。', '乙': '草花のような柔軟性があり、協調性に富んでいます。繊細で美的感覚に優れています。',
+                '丙': '太陽のような明るさがあり、情熱的で行動力があります。人を惹きつける魅力があります。', '丁': 'ろうそくの火のような優しい光で、周囲を温かく照らします。思慮深く献身的です。',
+                '戊': '山のようにどっしりとした安定感があり、信頼される存在です。包容力があります。', '己': '大地のような母性的な優しさがあり、育む力に優れています。堅実で真面目です。',
+                '庚': '刀剣のような鋭さがあり、決断力と実行力に優れています。正義感が強いです。', '辛': '宝石のような繊細さと美しさがあり、センスと感性に優れています。完璧主義的です。',
+                '壬': '大海のような包容力があり、知識欲旺盛で適応力があります。自由を愛します。', '癸': '雨露のような潤いを与える存在で、知恵と直感力に優れています。神秘的な魅力があります。'
             };
             return descriptions[stem] || '';
         }
-        
-        function getElementAnalysis(dayElement, elementCount) {
-            const total = Object.values(elementCount).reduce((a, b) => a + b, 0);
-            const dayElementCount = elementCount[dayElement];
-            const ratio = total > 0 ? dayElementCount / total : 0;
-            
-            if (ratio > 0.4) {
-                return `日主の${dayElement}の気が強く、自分の個性を発揮しやすい命式です。`;
-            } else if (ratio < 0.2) {
-                return `日主の${dayElement}の気が弱めなので、サポートしてくれる要素を大切にしましょう。`;
-            } else {
-                return `五行のバランスが取れており、調和的な命式です。`;
-            }
-        }
-        
-        function judgeStrength(dayStem, stems, branches, elementCount) {
-            const dayStemIndex = heavenlyStems.indexOf(dayStem);
-            const dayElement = stemElements[dayStemIndex];
-            
-            // 同じ五行と生じる五行の数を数える
-            const supportElements = {
-                '木': ['木', '水'],
-                '火': ['火', '木'],
-                '土': ['土', '火'],
-                '金': ['金', '土'],
-                '水': ['水', '金']
-            };
-            
-            let supportCount = 0;
-            supportElements[dayElement].forEach(element => {
-                supportCount += elementCount[element];
-            });
-            
-            // 同じ五行（比劫）の数を特に重視
-            const sameElementCount = elementCount[dayElement];
-            
-            const total = Object.values(elementCount).reduce((a, b) => a + b, 0);
-            if (total === 0) return '不明';
 
-            const supportRatio = supportCount / total;
-            const sameElementRatio = sameElementCount / total;
-            
-            // 月令の影響も考慮
-            const monthBranch = branches[1];
-            const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
-            const monthElement = branchElements[monthBranchIndex];
-            const hasMonthSupport = supportElements[dayElement].includes(monthElement);
-            
-            // 4段階判定
-            if (supportRatio > 0.65 || (supportRatio > 0.55 && hasMonthSupport) || sameElementRatio > 0.4) {
-                return '極身強：日主の力が非常に強く、強大なエネルギーを持っています。そのパワーを建設的に活用し、周囲との調和を特に意識することが大切です。';
-            } else if (supportRatio > 0.5 || (supportRatio > 0.4 && hasMonthSupport)) {
-                return '身強：日主の力が強く、自信と行動力に満ちています。リーダーシップを発揮しつつ、他者への配慮も大切にしましょう。';
-            } else if (supportRatio > 0.35 || (supportRatio > 0.25 && hasMonthSupport)) {
-                return '身弱：日主を支える要素を活用することで、より力を発揮できます。協力者との連携を大切にし、無理のない範囲で活動しましょう。';
-            } else {
-                return '極身弱：日主の力が非常に弱い状態です。サポートしてくれる環境や人間関係を特に大切にし、自分に合ったペースで着実に進むことが重要です。';
-            }
-        }
-        
         function getOverallFortune(dayStem, strength, elementCount) {
-            const dayStemIndex = heavenlyStems.indexOf(dayStem);
-            const dayElement = stemElements[dayStemIndex];
+            let fortune = `あなたは${dayStem}の生まれで、${stemElements[dayStem]}の性質を持っています。`;
+            if (strength.includes('極身強')) fortune += '非常に強いエネルギーと実行力を持ち、困難な状況でも突破できる力があります。その強大な力を社会貢献や創造的な活動に向けることで、大きな成功を収められるでしょう。謙虚さと柔軟性を忘れずに、周囲との調和を保つことが長期的な成功の鍵となります。';
+            else if (strength.includes('身強')) fortune += '強い個性と実行力を持っているため、リーダーシップを発揮する場面で活躍できるでしょう。時には周囲の意見に耳を傾け、柔軟性を持つことでさらなる成長が期待できます。';
+            else if (strength.includes('身弱')) fortune += '協調性と適応力に優れ、チームワークを大切にすることで成功を収められるでしょう。自分を支えてくれる人間関係を大切にし、自信を持って行動することが開運の鍵となります。';
+            else if (strength.includes('極身弱')) fortune += '繊細な感受性と洞察力を持ち、人の気持ちを理解する能力に優れています。サポーター的な立場で力を発揮し、協力的な環境で才能が開花します。無理をせず自分のペースを大切にし、信頼できる仲間と共に歩むことで幸運を引き寄せられるでしょう。';
             
-            let fortune = `あなたは${dayStem}の生まれで、${dayElement}の性質を持っています。`;
-            
-            if (strength.includes('極身強')) {
-                fortune += '非常に強いエネルギーと実行力を持ち、困難な状況でも突破できる力があります。';
-                fortune += 'その強大な力を社会貢献や創造的な活動に向けることで、大きな成功を収められるでしょう。';
-                fortune += '謙虚さと柔軟性を忘れずに、周囲との調和を保つことが長期的な成功の鍵となります。';
-            } else if (strength.includes('身強')) {
-                fortune += '強い個性と実行力を持っているため、リーダーシップを発揮する場面で活躍できるでしょう。';
-                fortune += '時には周囲の意見に耳を傾け、柔軟性を持つことでさらなる成長が期待できます。';
-            } else if (strength.includes('身弱')) {
-                fortune += '協調性と適応力に優れ、チームワークを大切にすることで成功を収められるでしょう。';
-                fortune += '自分を支えてくれる人間関係を大切にし、自信を持って行動することが開運の鍵となります。';
-            } else if (strength.includes('極身弱')) {
-                fortune += '繊細な感受性と洞察力を持ち、人の気持ちを理解する能力に優れています。';
-                fortune += 'サポーター的な立場で力を発揮し、協力的な環境で才能が開花します。';
-                fortune += '無理をせず自分のペースを大切にし、信頼できる仲間と共に歩むことで幸運を引き寄せられるでしょう。';
-            }
-            
-            // 不足している五行から開運アドバイス
-            const minElement = Object.keys(elementCount).reduce((a, b) => 
-                elementCount[a] < elementCount[b] ? a : b
-            );
-            
+            const minElement = Object.keys(elementCount).reduce((a, b) => elementCount[a] < elementCount[b] ? a : b);
             const elementAdvice = {
-                '木': '緑色のものを身につけたり、観葉植物を育てることで運気が上昇します。',
-                '火': '赤色のアイテムを取り入れたり、太陽の光を浴びることで活力が増します。',
-                '土': '黄色や茶色を意識し、大地に触れる機会を増やすと安定感が増します。',
-                '金': '白色や金属製のアクセサリーを身につけることで決断力が高まります。',
+                '木': '緑色のものを身につけたり、観葉植物を育てることで運気が上昇します。', '火': '赤色のアイテムを取り入れたり、太陽の光を浴びることで活力が増します。',
+                '土': '黄色や茶色を意識し、大地に触れる機会を増やすと安定感が増します。', '金': '白色や金属製のアクセサリーを身につけることで決断力が高まります。',
                 '水': '青色や黒色を取り入れ、水辺で過ごす時間を作ると知恵が深まります。'
             };
-            
-            fortune += `\n\n【開運アドバイス】\n${elementAdvice[minElement]}`;
-            
+            fortune += `<br><br><strong>【開運アドバイス】</strong><br>${elementAdvice[minElement]}`;
             return fortune;
         }
-        
-        // --- ここから修正 ---
-        // 大運計算（PDFの算出方法に基づいて修正）
+
         function calculateDaiunn() {
             const yearStem = document.getElementById('yearStem').value;
             const monthStem = document.getElementById('monthStem').value;
             const monthBranch = document.getElementById('monthBranch').value;
             const dayStem = document.getElementById('dayStem').value;
-            
-            if (!yearStem || !monthStem || !monthBranch || !window.currentGender || !window.currentBirthDate) {
-                return;
-            }
+            if (!yearStem || !monthStem || !monthBranch || !window.currentGender || !window.currentBirthDate) return;
             
             const gender = window.currentGender;
-            const birthDateWithTime = window.currentBirthDate; // 時刻情報を含むDateオブジェクト
-
-            // 年干の陰陽判定
+            const birthDateWithTime = window.currentBirthDate;
             const yearStemIndex = heavenlyStems.indexOf(yearStem);
             const isYangYear = yearStemIndex % 2 === 0;
-            
-            // 1. 順行・逆行の判定
             const isForward = (isYangYear && gender === 'male') || (!isYangYear && gender === 'female');
             
-            // 2. 初運（大運開始年齢）の計算
-            const year = birthDateWithTime.getFullYear();
-            const month = birthDateWithTime.getMonth() + 1; // 1-12
-            
+            const year = birthDateWithTime.getFullYear(), month = birthDateWithTime.getMonth() + 1;
             let daysDiff = 0;
             let setsuiriDateForCalc;
 
-            if (isForward) { // 順行：次の節入りまで進んで数える
+            if (isForward) {
                 const currentMonthSetsuiri = getSetsuiriDate(year, month);
-                
-                // 生まれた日が現在の月の節入り日「以降」か「より前」かで判断
                 if (birthDateWithTime.getDate() >= currentMonthSetsuiri.day) {
-                    // 「以降」の場合、次の月の節入りを探す
                     const nextMonth = month === 12 ? 1 : month + 1;
                     const nextYear = month === 12 ? year + 1 : year;
                     const nextSetsuiri = getSetsuiriDate(nextYear, nextMonth);
                     setsuiriDateForCalc = new Date(nextYear, nextMonth - 1, nextSetsuiri.day);
                 } else {
-                    // 「より前」の場合、現在の月の節入りが「次の節入り」
                     setsuiriDateForCalc = new Date(year, month - 1, currentMonthSetsuiri.day);
                 }
-                const timeDiff = setsuiriDateForCalc.getTime() - birthDateWithTime.getTime();
-                daysDiff = timeDiff / (1000 * 60 * 60 * 24);
-
-            } else { // 逆行：前の節入りまで戻って数える
+                daysDiff = (setsuiriDateForCalc.getTime() - birthDateWithTime.getTime()) / (1000 * 60 * 60 * 24);
+            } else {
                 const currentMonthSetsuiri = getSetsuiriDate(year, month);
-                
-                // 生まれた日が現在の月の節入り日「より前」か「以降」かで判断
                 if (birthDateWithTime.getDate() < currentMonthSetsuiri.day) {
-                    // 「より前」の場合、前の月の節入りを探す
                     const prevMonth = month === 1 ? 12 : month - 1;
                     const prevYear = month === 1 ? year - 1 : year;
                     const prevSetsuiri = getSetsuiriDate(prevYear, prevMonth);
                     setsuiriDateForCalc = new Date(prevYear, prevMonth - 1, prevSetsuiri.day);
                 } else {
-                    // 「以降」の場合、現在の月の節入りが「前の節入り」
                     setsuiriDateForCalc = new Date(year, month - 1, currentMonthSetsuiri.day);
                 }
-                const timeDiff = birthDateWithTime.getTime() - setsuiriDateForCalc.getTime();
-                daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+                daysDiff = (birthDateWithTime.getTime() - setsuiriDateForCalc.getTime()) / (1000 * 60 * 60 * 24);
             }
             
-            // PDFのルールに基づき初運年齢を計算 (3日で1歳、端数は四捨五入、最低1歳)
             const startAge = Math.max(1, Math.round(daysDiff / 3));
-            
-            // 3. 大運の干支と表を生成
             const monthStemIndex = heavenlyStems.indexOf(monthStem);
             const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
             
-            let daiunnHTML = '<table class="daiunn-table">';
-            daiunnHTML += '<tr><th>年齢</th><th>大運天干</th><th>大運地支</th><th>十神</th><th>運勢傾向</th></tr>';
-            
+            let daiunnHTML = '<table class="daiunn-table"><tr><th>年齢</th><th>大運天干</th><th>大運地支</th><th>通変星</th><th>運勢傾向</th></tr>';
             for (let i = 0; i < 8; i++) {
                 const age = startAge + (i * 10);
-                let stemIndex, branchIndex;
-                
-                if (isForward) {
-                    stemIndex = (monthStemIndex + i + 1) % 10;
-                    branchIndex = (monthBranchIndex + i + 1) % 12;
-                } else {
-                    // 負数にならないように十分な数を足してから剰余を計算
-                    stemIndex = (monthStemIndex - i - 1 + 100) % 10;
-                    branchIndex = (monthBranchIndex - i - 1 + 120) % 12;
-                }
-                
+                const stemIndex = isForward ? (monthStemIndex + i + 1) % 10 : (monthStemIndex - i - 1 + 100) % 10;
+                const branchIndex = isForward ? (monthBranchIndex + i + 1) % 12 : (monthBranchIndex - i - 1 + 120) % 12;
                 const daiunnStem = heavenlyStems[stemIndex];
                 const daiunnBranch = earthlyBranches[branchIndex];
                 const tenGod = getTenGod(dayStem, daiunnStem);
-                const fortune = getDaiunnFortune(tenGod, i);
-                
-                daiunnHTML += `<tr>`;
-                daiunnHTML += `<td>${age}歳～${age+9}歳</td>`;
-                daiunnHTML += `<td>${daiunnStem}</td>`;
-                daiunnHTML += `<td>${daiunnBranch}</td>`;
-                daiunnHTML += `<td>${tenGod}</td>`;
-                daiunnHTML += `<td>${fortune}</td>`;
-                daiunnHTML += `</tr>`;
+                const fortune = getDaiunnFortune(tenGod);
+                daiunnHTML += `<tr><td>${age}歳～${age+9}歳</td><td>${daiunnStem}</td><td>${daiunnBranch}</td><td>${tenGod}</td><td>${fortune}</td></tr>`;
             }
-            
             daiunnHTML += '</table>';
             
             document.getElementById('daiunnResult').innerHTML = daiunnHTML;
             document.getElementById('daiunnSection').style.display = 'block';
         }
-        // --- ここまで修正 ---
-        
-        // 大運の運勢傾向
-        function getDaiunnFortune(tenGod, period) {
+
+        function getDaiunnFortune(tenGod) {
             const fortunes = {
-                '比肩': '独立心が強まり、自分の道を切り開く時期',
-                '劫財': '協力者との出会い、競争心が高まる時期',
-                '食神': '才能開花、楽しみや趣味が充実する時期',
-                '傷官': '創造性発揮、変革や挑戦の時期',
-                '正財': '経済的安定、堅実な成果を得る時期',
-                '偏財': '臨時収入、チャンスや幸運に恵まれる時期',
-                '正官': '社会的地位向上、責任ある立場につく時期',
-                '偏官': '実力発揮、困難を乗り越える時期',
-                '印綬': '学習と成長、知識や技術習得の時期',
-                '偏印': '独創性発揮、新しい分野への挑戦の時期'
+                '比肩': '独立心が強まり、自分の道を切り開く時期', '劫財': '協力者との出会い、競争心が高まる時期',
+                '食神': '才能開花、楽しみや趣味が充実する時期', '傷官': '創造性発揮、変革や挑戦の時期',
+                '正財': '経済的安定、堅実な成果を得る時期', '偏財': '臨時収入、チャンスや幸運に恵まれる時期',
+                '正官': '社会的地位向上、責任ある立場につく時期', '偏官': '実力発揮、困難を乗り越える時期',
+                '印綬': '学習と成長、知識や技術習得の時期', '偏印': '独創性発揮、新しい分野への挑戦の時期'
             };
-            
             return fortunes[tenGod] || '変化と成長の時期';
         }
     </script>
 </body>
 </html>
+
