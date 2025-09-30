@@ -471,10 +471,13 @@
 
         // --- Start of Kango/Shigo Logic ---
         
+        // --- ▼▼▼ isKangoPair関数の修正 ▼▼▼ ---
         const isKangoPair = (s1, s2) => {
             const pairs = [['甲', '己'], ['乙', '庚'], ['丙', '辛'], ['丁', '壬'], ['戊', '癸']];
+            // s1 と s2 がペアのどちらかに一致するか、またはその逆の組み合わせに一致するかをチェック
             return pairs.some(p => (p[0] === s1 && p[1] === s2) || (p[0] === s2 && p[1] === s1));
         };
+        // --- ▲▲▲ isKangoPair関数の修正 ▲▲▲ ---
 
         const isShichuPair = (b1, b2) => {
             const pairs = [['子', '午'], ['丑', '未'], ['寅', '申'], ['卯', '酉'], ['辰', '戌'], ['巳', '亥']];
@@ -494,56 +497,81 @@
             return shigoPairs.some(p => (p.b1 === b1 && p.b2 === b2) || (p.b1 === b2 && p.b2 === b1));
         };
 
-
-        function checkKango(stems, branches) {
-            let transformedStems = [...stems];
+        function checkKango(originalStems, branches) {
+            let transformedStems = [...originalStems];
             let messages = [];
-
-            const monthBranch = branches[1]; // 月支
-            const isKangoMD = isKangoPair(stems[1], stems[2]); // 月干-日干
-            const isKangoDH = isKangoPair(stems[2], stems[3]); // 日干-時干
-
-            // 妬合 check: 日干が月干と時干に挟まれる
+            let kangoedIndices = new Set();
+        
+            const hasElement = (elementKey, chart, exclusions = []) => {
+                const elementChars = elements[elementKey];
+                const chartToCheck = [...chart.stems, ...chart.branches];
+                for (const char of chartToCheck) {
+                    if (exclusions.includes(char)) continue;
+                    if (elementChars.includes(char)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+        
+            const kangoRules = [
+                { pair: ['甲', '己'], newElement: '土', newStems: { '甲': '戊', '己':'己' }, monthBranches: ['丑', '辰', '未', '戌', '巳', '午'], blockingElement: 'wood' },
+                { pair: ['乙', '庚'], newElement: '金', newStems: { '乙': '辛', '庚':'庚' }, monthBranches: ['申', '酉', '丑', '辰', '未', '戌'], blockingElement: 'fire' },
+                { pair: ['丙', '辛'], newElement: '水', newStems: { '丙': '壬', '辛': '癸' }, monthBranches: ['子', '亥', '申', '酉', '丑', '辰'], blockingElement: 'earth', blockingExclusion: ['丑', '辰'] },
+                { pair: ['丁', '壬'], newElement: '木', newStems: { '丁': '乙', '壬': '甲' }, monthBranches: ['寅', '卯', '亥', '子', '未'], blockingElement: 'metal' },
+                { pair: ['戊', '癸'], newElement: '火', newStems: { '戊': '丙', '癸': '丁' }, monthBranches: ['巳', '午', '寅', '卯', '戌', '未'], blockingElement: 'water' }
+            ];
+        
+            const isKangoMD = isKangoPair(originalStems[1], originalStems[2]);
+            const isKangoDH = isKangoPair(originalStems[2], originalStems[3]);
             if (isKangoMD && isKangoDH) {
                 messages.push(`日干が月干と時干の両方から干合される妬合（とうごう）のため、干合は変化しません。`);
-                return { transformedStems, messages }; // 妬合の場合は以降の干合は成立しない
+                return { transformedStems: originalStems, messages };
             }
+        
+            const checkPairs = [
+                { idx1: 1, idx2: 2, name: '月干-日干' },
+                { idx1: 2, idx2: 3, name: '日干-時干' },
+                { idx1: 0, idx2: 1, name: '年干-月干' }
+            ];
+        
+            for (const { idx1, idx2, name } of checkPairs) {
+                if (kangoedIndices.has(idx1) || kangoedIndices.has(idx2)) {
+                    continue;
+                }
+        
+                const s1 = originalStems[idx1];
+                const s2 = originalStems[idx2];
+        
+                // isKangoPairで正しい組み合わせかまずチェック
+                if (!isKangoPair(s1, s2)) {
+                    continue;
+                }
 
-            let kangoedIndices = new Set();
-
-            // 月干-日干 の干合をチェック
-            if (isKangoMD) {
-                const sA = stems[1], sB = stems[2];
-                let transformed = false;
-                // ... (transformation logic remains the same)
-                if ((sA === '甲' && sB === '己') || (sA === '己' && sB === '甲')) {
-                    if (['土', '火'].includes(branchElements[monthBranch])) {
-                        transformedStems[stems.indexOf('甲')] = '戊';
-                        messages.push(`月干-日干で甲己干合が成立し、土に変化します。`);
-                        transformed = true;
+                const rule = kangoRules.find(r => r.pair.includes(s1) && r.pair.includes(s2));
+        
+                if (rule) {
+                    const monthBranch = branches[1];
+                    const isMonthBranchValid = rule.monthBranches.includes(monthBranch);
+                    const exclusionsForBlockingCheck = [s1, s2, ...(rule.blockingExclusion || [])];
+                    const isNotBlocked = !hasElement(rule.blockingElement, { stems: originalStems, branches: branches }, exclusionsForBlockingCheck);
+        
+                    if (isMonthBranchValid && isNotBlocked) {
+                        transformedStems[idx1] = rule.newStems[s1] || s1;
+                        transformedStems[idx2] = rule.newStems[s2] || s2;
+                        
+                        messages.push(`${name}で${s1}${s2}干合が成立し、${rule.newElement}に変化します。`);
+                        kangoedIndices.add(idx1);
+                        kangoedIndices.add(idx2);
+                    } else {
+                        let reason = [];
+                        if (!isMonthBranchValid) reason.push("月支の条件を満たしません");
+                        if (!isNotBlocked) reason.push(`命式中に変化を妨げる${rule.blockingElement}の気があります`);
+                        messages.push(`${name}で${s1}${s2}干合がありますが、変化しません (${reason.join('、')})。`);
                     }
-                } // ... other else-if blocks
-                
-                if (transformed) {
-                    kangoedIndices.add(1); kangoedIndices.add(2);
                 }
             }
-
-            // 日干-時干 の干合をチェック (月干-日干で干合していない場合のみ)
-            if (isKangoDH && !kangoedIndices.has(2)) {
-                 const sA = stems[2], sB = stems[3];
-                 let transformed = false;
-                 // ... (transformation logic remains the same)
-                if ((sA === '丙' && sB === '辛') || (sA === '辛' && sB === '丙')) {
-                    if (['水', '金'].includes(branchElements[monthBranch]) || monthBranch === '辰') {
-                        transformedStems[stems.indexOf('丙')] = '壬';
-                        transformedStems[stems.indexOf('辛')] = '癸';
-                        messages.push(`日干-時干で丙辛干合が成立し、水に変化します。`);
-                        transformed = true;
-                    }
-                } // ... other else-if blocks
-            }
-
+        
             return { transformedStems, messages };
         }
 
@@ -622,20 +650,28 @@
             const sortedBranches = [branchesUI[3], branchesUI[2], branchesUI[1], branchesUI[0]];
 
             // Check for transformations based on original chart
-            // Note: Kango should be checked before Shigo as Shigo depends on final stem values
             const kangoResult = checkKango(sortedStems, sortedBranches);
             let transformedStems = kangoResult.transformedStems;
             const shigoResult = checkShigo(transformedStems, sortedBranches);
 
-
             // Update UI selects if stems were transformed by Kango
-            if (JSON.stringify(transformedStems) !== JSON.stringify(sortedStems)) {
-                document.getElementById('yearStem').value = transformedStems[0];
-                document.getElementById('monthStem').value = transformedStems[1];
-                document.getElementById('dayStem').value = transformedStems[2];
-                document.getElementById('hourStem').value = transformedStems[3];
-            }
+            const yearStemUI = document.getElementById('yearStem');
+            const monthStemUI = document.getElementById('monthStem');
+            const dayStemUI = document.getElementById('dayStem');
+            const hourStemUI = document.getElementById('hourStem');
             
+            const displayStems = [transformedStems[3], transformedStems[2], transformedStems[1], transformedStems[0]];
+            const originalDisplayStems = [sortedStems[3], sortedStems[2], sortedStems[1], sortedStems[0]];
+            
+            [hourStemUI, dayStemUI, monthStemUI, yearStemUI].forEach((ui, index) => {
+                ui.value = displayStems[index];
+                if (displayStems[index] !== originalDisplayStems[index]) {
+                    ui.classList.add('transformed');
+                } else {
+                    ui.classList.remove('transformed');
+                }
+            });
+
             const dayStem = transformedStems[2];
             if (!dayStem) return;
 
@@ -650,11 +686,10 @@
                 const hidden = hiddenStemsPriority[branch];
                 return hidden ? hidden.map(hStem => getTenGod(dayStem, hStem)).join('・') : '';
             });
-            // Order is hour, day, month, year for display
-            document.getElementById('hourHiddenGod').textContent = hiddenGods[3];
-            document.getElementById('dayHiddenGod').textContent = hiddenGods[2];
-            document.getElementById('monthHiddenGod').textContent = hiddenGods[1];
-            document.getElementById('yearHiddenGod').textContent = hiddenGods[0];
+            document.getElementById('hourHiddenGod').textContent = hiddenGods[0];
+            document.getElementById('dayHiddenGod').textContent = hiddenGods[1];
+            document.getElementById('monthHiddenGod').textContent = hiddenGods[2];
+            document.getElementById('yearHiddenGod').textContent = hiddenGods[3];
 
 
             // Display Tsuhensei for Tenkan (天干通変星)
@@ -663,10 +698,10 @@
             document.getElementById('yearGod').textContent = getTenGod(dayStem, transformedStems[0]);
 
             // Display 12 Un (十二運)
-            document.getElementById('hour12').textContent = getTwelveStage(transformedStems[3], sortedBranches[3]);
-            document.getElementById('day12').textContent = getTwelveStage(transformedStems[2], sortedBranches[2]);
-            document.getElementById('month12').textContent = getTwelveStage(transformedStems[1], sortedBranches[1]);
-            document.getElementById('year12').textContent = getTwelveStage(transformedStems[0], sortedBranches[0]);
+            document.getElementById('hour12').textContent = getTwelveStage(dayStem, sortedBranches[3]);
+            document.getElementById('day12').textContent = getTwelveStage(dayStem, sortedBranches[2]);
+            document.getElementById('month12').textContent = getTwelveStage(dayStem, sortedBranches[1]);
+            document.getElementById('year12').textContent = getTwelveStage(dayStem, sortedBranches[0]);
             
             analyzeDestiny(dayStem, transformedStems, sortedBranches, kangoResult.messages, shigoResult);
             
@@ -846,12 +881,12 @@
                 </div>`;
             document.getElementById('analysisResult').innerHTML = analysisHTML;
         }
-
+        
         function judgeStrength(dayStem, stems, branches) {
             if (!dayStem || branches.some(b => !b) || stems.some(s => !s)) {
                 return '命式が不完全なため判定できません。';
             }
-
+        
             const elementCycle = ['木', '火', '土', '金', '水'];
             const getElement = (name) => {
                 const stemEl = stemElements[name];
@@ -860,38 +895,38 @@
                 if (branchEl) return branchEl;
                 return null;
             };
-
+        
             const dayElement = getElement(dayStem);
             const monthBranch = branches[1];
-            const monthElement = getElement(monthBranch);
-
+        
             const getRelationship = (baseEl, targetEl) => {
                 if (!baseEl || !targetEl) return 'none';
-                if (baseEl === targetEl) return 'same';
+                if (baseEl === targetEl) return 'same'; 
+                
                 const baseIndex = elementCycle.indexOf(baseEl);
                 const targetIndex = elementCycle.indexOf(targetEl);
-                if ((baseIndex + 1) % 5 === targetIndex) return 'produces';
+
+                if ((baseIndex + 4) % 5 === targetIndex) return 'produced_by'; 
+                if ((baseIndex + 1) % 5 === targetIndex) return 'produces'; 
                 if ((baseIndex + 2) % 5 === targetIndex) return 'attacks';
                 if ((baseIndex + 3) % 5 === targetIndex) return 'attacked_by';
-                if ((baseIndex + 4) % 5 === targetIndex) return 'produced_by';
                 return 'none';
             };
-            
-            const isTokurei = ['same', 'produced_by'].includes(getRelationship(dayElement, monthElement));
-            const tokuchiCount = [branches[0], branches[2], branches[3]].filter(b => ['same', 'produced_by'].includes(getRelationship(dayElement, getElement(b)))).length;
-            const tokujoCount = [stems[0], stems[1], stems[3]].filter(s => ['same', 'produced_by'].includes(getRelationship(dayElement, getElement(s)))).length;
-            
-            const isShitsurei = ['produces', 'attacks', 'attacked_by'].includes(getRelationship(dayElement, monthElement));
-            const weakeningStems = [stems[0], stems[1], stems[3]].filter(s => ['produces', 'attacks', 'attacked_by'].includes(getRelationship(dayElement, getElement(s)))).length;
-            const weakeningBranches = [branches[0], branches[2], branches[3]].filter(b => ['produces', 'attacks', 'attacked_by'].includes(getRelationship(dayElement, getElement(b)))).length;
-
-            if (isTokurei && tokujoCount >= 2 && tokuchiCount >= 2) {
-                return '極身強：日主の力が極めて強く、非常に大きなエネルギーを持っています。自己の意志を貫く強さがありますが、強引になりすぎないよう周囲との調和を意識することが成功の鍵です。';
-            }
-            if (isShitsurei && weakeningStems >= 2 && (weakeningBranches-1) >= 3) {
-                return '極身弱：日主の力が極めて弱く、繊細で周囲の影響を受けやすいです。自分を支えてくれる環境や人間関係を何よりも大切に。無理をせず、自分のペースで着実に進むことで才能が開花します。';
-            }
-
+        
+            const isStrengthening = (relationship) => ['same', 'produced_by'].includes(relationship);
+            const isWeakening = (relationship) => ['produces', 'attacks', 'attacked_by'].includes(relationship);
+        
+            const isTokurei = isStrengthening(getRelationship(dayElement, getElement(monthBranch)));
+            const isShitsurei = isWeakening(getRelationship(dayElement, getElement(monthBranch)));
+        
+            const strengtheningBranchesCount = [branches[0], branches[2], branches[3]]
+                .filter(b => isStrengthening(getRelationship(dayElement, getElement(b)))).length;
+            const hasTokuchi = strengtheningBranchesCount > 0;
+        
+            const strengtheningStemsCount = [stems[0], stems[1], stems[3]]
+                .filter(s => isStrengthening(getRelationship(dayElement, getElement(s)))).length;
+            const hasTokujo = strengtheningStemsCount > 0;
+        
             const checkKaikyoku = () => {
                 const branchSet = new Set(branches);
                 const combinations = [
@@ -901,26 +936,51 @@
                     { name: '三合金局', branches: ['巳', '酉', '丑'], element: '金' }, { name: '三合水局', branches: ['申', '子', '辰'], element: '水' },
                 ];
                 for (const comb of combinations) {
-                    if (comb.branches.every(b => branchSet.has(b))) return { found: true, element: comb.element, includesMonthBranch: comb.branches.includes(monthBranch) };
+                    if (comb.branches.every(b => branchSet.has(b))) {
+                        if (isStrengthening(getRelationship(dayElement, comb.element))) {
+                            return { found: true, includesMonthBranch: comb.branches.includes(monthBranch) };
+                        }
+                    }
                 }
-                return { found: false };
+                return { found: false, includesMonthBranch: false };
             };
             const kaikyokuResult = checkKaikyoku();
-
+        
+            if (isTokurei && strengtheningStemsCount >= 2 && strengtheningBranchesCount >= 2) {
+                return '極身強：日主の力が極めて強く、非常に大きなエネルギーを持っています。自己の意志を貫く強さがありますが、強引になりすぎないよう周囲との調和を意識することが成功の鍵です。';
+            }
+        
+            const weakeningStemsCount = [stems[0], stems[1], stems[3]]
+                .filter(s => isWeakening(getRelationship(dayElement, getElement(s)))).length;
+            const allWeakeningBranchesCount = branches
+                .filter(b => isWeakening(getRelationship(dayElement, getElement(b)))).length;
+        
+            if (isShitsurei && weakeningStemsCount >= 2 && allWeakeningBranchesCount >= 3) {
+                 return '極身弱：日主の力が極めて弱く、繊細で周囲の影響を受けやすいです。自分を支えてくれる環境や人間関係を何よりも大切に。無理をせず、自分のペースで着実に進むことで才能が開花します。';
+            }
+        
             let isMikyo = false;
-            const conditionsMet = [isTokurei, tokuchiCount > 0, tokujoCount > 0];
-            const numConditionsMet = conditionsMet.filter(Boolean).length;
-            
-            if (numConditionsMet >= 2) {
-                if (!conditionsMet[0] && conditionsMet[1] && conditionsMet[2]) { 
-                    if (tokuchiCount + tokujoCount >= 3) isMikyo = true;
+            const conditionsMet = [isTokurei, hasTokuchi, hasTokujo];
+            const conditionsMetCount = conditionsMet.filter(Boolean).length;
+        
+            if (conditionsMetCount >= 2) {
+                if (!conditionsMet[0] && conditionsMet[1] && conditionsMet[2]) {
+                    if (strengtheningBranchesCount + strengtheningStemsCount >= 3) isMikyo = true;
                 } else {
                     isMikyo = true;
                 }
             }
-            if (!isMikyo && kaikyokuResult.found && ['same', 'produced_by'].includes(getRelationship(dayElement, kaikyokuResult.element)) && (kaikyokuResult.includesMonthBranch || (!kaikyokuResult.includesMonthBranch && isTokurei))) isMikyo = true;
-            
-            if (isMikyo) return '身強：日主の力が強く、行動力と自己肯定感が高いタイプです。リーダーシップを発揮できますが、時には他者の意見に耳を傾ける柔軟性も持つことで、より大きな成功を掴めます。';
+        
+            if (!isMikyo && kaikyokuResult.found) {
+                if (kaikyokuResult.includesMonthBranch || (!kaikyokuResult.includesMonthBranch && isTokurei)) {
+                    isMikyo = true;
+                }
+            }
+        
+            if (isMikyo) {
+                return '身強：日主の力が強く、行動力と自己肯定感が高いタイプです。リーダーシップを発揮できますが、時には他者の意見に耳を傾ける柔軟性も持つことで、より大きな成功を掴めます。';
+            }
+        
             return '身弱：協調性があり、周囲の状況に合わせて柔軟に対応できるタイプです。サポート役やチームで動くことで力を発揮します。自信を持ち、信頼できる仲間との連携を大切にしましょう。';
         }
 
