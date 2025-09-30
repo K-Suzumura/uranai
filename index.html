@@ -129,26 +129,31 @@
             font-size: 14px;
             background: white;
         }
-        .daiunn-section {
+        .daiunn-section, .nenun-section {
             margin-top: 20px;
             padding: 15px;
             background: #f9f9f9;
             border-radius: 8px;
         }
-        .daiunn-table {
+        .daiunn-table, .nenun-table {
             width: 100%;
             margin-top: 10px;
             font-size: 14px;
         }
-        .daiunn-table th {
+        .daiunn-table th, .nenun-table th {
             background: #667eea;
             color: white;
             padding: 5px;
         }
-        .daiunn-table td {
+        .daiunn-table td, .nenun-table td {
             padding: 5px;
             text-align: center;
             border: 1px solid #ddd;
+        }
+        .nenun-table td:last-child {
+            text-align: left;
+            padding: 8px;
+            line-height: 1.5;
         }
         .transformed {
             color: red;
@@ -281,6 +286,19 @@
                 <h3>大運（10年ごとの運勢）</h3>
                 <div id="daiunnResult"></div>
             </div>
+
+            <!-- New section for Nenun (Yearly Luck) -->
+            <div class="nenun-section" id="nenunSection" style="display: none;">
+                <h3>年運（1年ごとの運勢）</h3>
+                 <div class="input-row" style="margin-bottom: 10px;">
+                    <div class="input-group">
+                        <label for="nenunStartYear">開始年:</label>
+                        <input type="number" id="nenunStartYear" value="2024" style="width: 80px;">
+                        <button onclick="updateNenun()" style="margin: 0 0 0 10px; padding: 5px 15px;">再計算</button>
+                    </div>
+                </div>
+                <div id="nenunResult"></div>
+            </div>
         </div>
     </div>
 
@@ -321,6 +339,51 @@
             '従殺格': { title: '組織の中で地位を築く権威の人', description: '忍耐強く、管理能力に優れています。組織の中で序列と秩序を守り、任務を遂行することで、社会的に高い地位と権力を得る人生です。' },
             '従勢格': { title: '時代の流れに乗る柔軟な世渡り上手', description: '様々な才能に満ち溢れ、周囲の状況に柔軟に対応していくことで幸運を掴みます。富にも地位にも恵まれ、多くの人に好かれる円満な人生です。' },
         };
+        
+        // Data from PDF for Nenun (Yearly Luck)
+        const nenunFortunes = {
+            '比肩': {
+                weak: '自立心が強くなり、挑戦意欲が高まるときです。初志貫徹してけじめをつけます。目の前にある困難をはねのけようと奮闘するでしょう。会社員は、転勤や転職などで自分の望む仕事環境につくか、独立して束縛のない自由な環境で仕事ができるようになるでしょう。自営業の人は、新しい市場に参入することや、新商品を開発することで事業が進展するでしょう。もし、転職や独立を考えているのであれば、チャンスはこの時期です。友人や兄弟姉妹の助力が得られるときですが、無理に求めなくても、一生懸命に努力奮闘しているうちに、将来の見通しは開けてきます。',
+                strong: '自我が強くなり、自分本位な言動になり人間関係のトラブルを起こしがちです。会社員は、同僚と不和になったり、自分から束縛を嫌って辞職したりします。自営業の人は、独立や拡張の無理がたたって金銭的に厳しい状況に追い込まれることもあります。友人との合作事業は、互いに意見を譲らず、決裂するか共倒れになるでしょう。投機は、見込み違いで損失が大きくなりますからしてはいけません。また、兄弟姉妹や友人から金銭的な迷惑をかけられたり、意見の相違から対立したりしがちです。'
+            },
+            '劫財': {
+                weak: '意志が強くなり、やる気が出てきます。難しそうなことでもチャレンジしてみようという気持ちが強くなります。ふつふつと闘志がわいてきます。会社員は、それまでの業績不振をはね返すような果敢な行動で成績を上げるでしょう。自営業の人は、困難を恐れず挑戦して、新しい分野を開拓するでしょう。また、この時期は、いつになく強引になりますが、それが功を奏するときなので小さなことにはこだわらず、大胆に行動しましょう。友人・兄弟からの協力が得られるので共同で何かをするのもよいでしょう。',
+                strong: '自己中心的になり何事に対しても強引になります。しかし、理想と現実の狭間で苦悩におちいり、やる気をなくすか自暴自棄になってしまうでしょう。会社員は、独断で決めたことが失敗して会社で孤立無援となります。自営業の人は、得意先の倒産や手形の不渡り、仕事仲間との対立などにより、金銭的な損失を受けるでしょう。また、友人からの損害を受けます。あなたの成功の邪魔をしようとする人や足を引っ張ろうとする人が次々に現れ、物事は思うように運ばないでしょう。謙虚になり自己反省しないと、仕事、お金、愛情全ての面で絶望するような結果を招きかねません。'
+            },
+            '食神': {
+                strong: '精神的に落ち着き、ゆったりとした豊かな毎日を送ることができます。人間関係は円満に運び、仕事も学業も順調なとき。生活は安定して、衣食住に恵まれます。趣味や娯楽に興ずることも多くなるでしょう。食べ物がおいしく感じられ、必然的にふくよかな体つきになります。友人との歓談や飲食の機会も増え、笑っていることが多いでしょう。金銭的にも困らないので、欲しいと思っていたものが手に入り、幸せ気分いっぱいです。豊かなアイデアがわき、表現する能力が高まりますから、何かを発表するチャンスです。',
+                weak: 'だらしない日々におちいりやすいでしょう。やらなければならないことをしないで、遊び、飲食、映画、旅行、カラオケなどで浮かれ気分になるときです。そのため、仕事を放り出し、趣味や恋愛にうつつを抜かして人から非難されることもあるでしょう。また、不注意から損失を招いたり、気のゆるみから人につけ入られて利用されたりします。ぬるま湯につかってぼんやりしていないで、注意深くなりましょう。金銭面では浪費しがちです。遊興で散財したり、衝動的に高価なものを買ってしまったりして、後から支払いに困るということもあるでしょう。'
+            },
+            '傷官': {
+                strong: '感性が鋭くなり、頭の回転が速くなります。打てば響くように勘が冴えます。新しい発想や企画が浮かんで才能が発揮されます。芸術方面でも認められて、発表の喜びを得ることができます。芸術的なことや、技術の習得に適しており、それに没頭すれば、かなりの成果が上がるでしょう。仕事や人間関係への問題提起をして改革を断行し、成功します。無駄なことはやめ、いらないものは取り除きます。情に流されず、合理性を重視して成果が上がります。',
+                weak: 'やり場のないいらだちや焦燥感が強まります。社会への怒りや環境への不満がもとで暴走します。対人関係に摩擦を起こし、目上に反抗的になりやすいとき、仲のよかった人とも次々とトラブルを起こしてしまいます。怒りと矛盾が爆発して会社を辞めることもあります。周囲に迷惑をかける、職場で信用を失う、自分の名誉を失うなど、散々な目にあいます。場合によっては、法律に触れて刑に服すようなことにもなりかねません。とにかくこの時期は、社会、目上、上司、親などに反抗するようなことばかりしたくなるので、自分の行動が非難の的にならないように気をつけて。'
+            },
+            '偏財': {
+                strong: '人との社交が盛んになります。そのための忙しさは頂点を極めますが、体力気力ともに充実していて楽しく活動できます。この時期は、思いがけない金運に恵まれ、大きなお金が苦労せずに転がり込んでくるのが特徴です。お金とチャンスは素早くつかみましょう。恋人や家族とも仲よく過ごし、人間関係は円満そのもの。あなたの才能や人柄が輝くときで、どこへ行っても人気者になるでしょう。必然的に、人の集まりや飲食の場、仕事の駆け引きの場に誘われることが多くなります。会社員は、活躍の場を与えられたり、給料がアップしたりします。自営業の人は、ヒット商品が出て多くの利益が出ます。',
+                weak: '人の集まりや社交に追われて、忙しく走り回るのですが、その割に実りがありません。会社員は接待などで毎日酒場や遊興の場に入り浸り、業績は一向に上がりません。自営業の人は十分な下調べや準備をしないで手をつけ、利益が上がらないということになりやすいでしょう。労力をかけた割に結果が全く伴わず、周囲の人に対して面目が立たないときです。他人の世話事に振り回されて自分の本業にかける時間がなくなったら、交際に忙しすぎて自分を見失ったりしがちです。また、入ってきたお金は出て行ってしまうときですから、遊びや社交を控えるのが無難でしょう。'
+            },
+            '正財': {
+                strong: '財運に恵まれるときです。勤勉になれば確実にお金が入ってきます。会社員は、昇給したり、報酬のよい会社に転職したりします。自営業の人は、よい条件の仕事が回ってきたり、ヒット商品が出たりして売り上げが非常に上がるときでしょう。とにかく豊富な財産に恵まれる運にあります。コツコツ働けば、多くの人の協力を得られ、何倍もの収入となって返ってきます。よい不動産にも縁のある時期です。土地やマンション、家を買う好機です。お金にゆとりのあるときなので、貯蓄だけではなく、機械などの設備に投資しておくのもよいでしょう。人間関係も好調です。',
+                weak: '一生懸命に働いているにもかかわらず、金銭的に豊かにならないときです。会社員は苦労して取り組んだ仕事の成果が出なかったり、結果が期待はずれに終わったりします。自営業の人は、お金をかけて取り組んでも利益が上がらなかったり、事業が不発に終わったりします。この時期はとにかく金運が悪いために、土地や家財を売らなければならなかったり、母親の病気や父親のことで出費があったりします。家計に余裕がないために、誘いを断ることになり、その結果つき合いが悪いとか、ケチだとか非難されやすいでしょう。まじめに働きすぎて体調を崩しやすいときです。'
+            },
+            '偏官': {
+                strong: '思い切った転換をはかって成果が上がるときです。人から見ると荒っぽいやり方ですが、功を奏します。会社員は、難題を任されますが、それを巧みに処理して昇進します。権力も握るでしょう。優良企業から引き抜きがあるかもしれません。自営業の人は思い切った事業転換をし、新規事業に参入して成果を上げます。規模の大きい会社から引き抜き要請があることも。才能が試されるときなので、自分には高すぎる目標でも頑張り抜きましょう。試験などではよい成績で合格するでしょう。金銭的には、異動、転職、転業のためにお金が出ますが、次のステップのための出費であり無駄にはなりません。',
+                weak: '急に自分を試してみたくなって、大胆な行動をしたり、いちかばちかの勝負に出て失敗しやすいときです。変化の激しいときではありますが、自分から動くとかえって苦労がふえます。会社員は部署が変わるなどして、慣れない仕事のために苦労します。自営業の人は、内容を変えたり、店じまいせざるを得なくなったりします。仕事のストレスが大きいために、精神不安になりやすく、安眠できないこともあります。訴訟や法的な問題が起きた場合は勝つ見込みは少なく、そのために立場も名誉も失ってしまうでしょう。このようなときは、下手に動かず、趣味に興じたり、旅行などで気分転換をしたりするとよいでしょう。'
+            },
+            '正官': {
+                strong: '社会的立場の高い人から引き立てを受けるときです。競争に勝って社会的に高い地位が得られることで自信がついてきます。それまでしてきた努力が社会的な形で実を結びます。そのことで周囲からも高い評価を受けるでしょう。会社員は、昇級や出世が期待できます。今よりも待遇のよいところへの栄転や引き抜きもあるでしょう。自営業の人は、協業や業務提携の話がまとまります。金銭的にも順調です。社会的な信用がありますから、土地や住宅の購入、あるいは事業プランのための資金作りの好機です。訴訟や法的な問題が起きても有利に運び、かえって信用や評価を高めることになるでしょう。',
+                weak: '周囲から期待が寄せられて、精神的な重圧に苦しみます。会社員は、新しい職場でなかなか仕事が覚えられないといった苦労が多く、緊張とストレスから体調を崩しがちです。自営業の人は、古いスタイルに固執して、社会の変化にうまく対応していけず流行に乗れません。試験はレベルを落とさないと合格できません。この時期に発展を望んで無理に何かをしようとすると、信用も地位もなくしてしまいます。グループや組織ぐるみで何かを計画しても計画倒れになりやすいでしょう。いずれにせよ結果はよくないので、新しい事業は控えましょう。保証人になるのも避けたほうがよく、法的な問題になったり訴訟を起こされたりする可能性もあります。'
+            },
+            '偏印': {
+                weak: '直観が冴えます。精神的な悟りに目覚めるときです。今まで理解できなかったことも、突然、気づきに至るでしょう。お金や物質があふれた現実的な世界よりも精神世界に興味を持つときです。それがきっかけで、透徹した境地に至ったり、優れた芸術作品や新しいプランを思いついたりします。仕事上でも変化があります。趣味が利益を生んだり、副業を持ったりと、芸術や工芸などから思いがけない喜びを得られます。引っ越しや旅をすると、何らかの有益なインスピレーションを得られるでしょう。また、年長者や先生からの大切な教えや助力を受けられます。',
+                strong: '失恋や失敗などがきっかけで挫折します。鬱々とした気分になり、積極的に何かをしようとする気持ちを失います。自分の世界に閉じこもって、周囲と関わり合いを持たなくなり、親しい人と会うのさえわずらわしくなります。何をやっても続かず、中途半端になって途中で投げ出してしまいます。友達もできず、内向的になり、孤独に家にいることが多くなりがちです。この時期は会社を辞めたり学校を退学したりと、生活が大きく変わるでしょう。判断力に欠けているので、衝動的に何かをやって人にだまされたり、利用されたりして、とかく失敗しがちですから注意が必要です。'
+            },
+            '印綬': {
+                weak: 'これまで堅実に努力してきたことが実を結び、何かで表彰されたり、名誉なことがあったりします。頭が冴えて、吸収力が増しますから、たくさんの教養を身につけることができます。学問や研究に没頭すると、とても成果が上がります。専門分野の知識をさらに学ぶには最適なときです。また、この時期は宗教や哲学に触れることにより、内面の豊かさを得ます。多くの知識を得ることで、視野が広くなり、世界情勢や経済の動向についても詳しくなるでしょう。教師、年長者、母親などからの教えや助けが得られ、何事もうまく運ぶときです。',
+                strong: '内向的になり、活動力が低下するときです。母親や年長者の干渉が強くなるので、依頼心を起こしてやる気を失います。表現力は乏しくなり、気苦労が多くなります。何かの思想に夢中になったり、一つの考え方に偏ったりして、多様な考えを受け入れられなくなりがちです。社交性もなくなります。場合によっては、現実世界から身を引く人もいます。毎日、家でゴロゴロしていて、何もしたくなくなり、無気力になります。金銭的にも不調なときですから、努めてコツコツ働くのがよいでしょう。心因性の病気にかかりやすいでしょう。積極的に行動し、多くの人に会うと気が晴れます。'
+            }
+        };
+
 
         const hiddenStemsPriority = {
             '子': ['癸', '壬'],   '丑': ['己', '辛', '癸'],   '寅': ['甲', '丙', '戊'],
@@ -437,6 +500,7 @@
             window.currentBirthDate = new Date(`${birthDateStr}T${birthTime}`);
 
             const year = window.currentBirthDate.getFullYear(), month = window.currentBirthDate.getMonth() + 1, day = window.currentBirthDate.getDate();
+            document.getElementById('nenunStartYear').value = year;
 
             const risshun = getSetsuiriDate(year, 2);
             const risshunDate = new Date(year, 1, risshun.day);
@@ -471,13 +535,10 @@
 
         // --- Start of Kango/Shigo Logic ---
         
-        // --- ▼▼▼ isKangoPair関数の修正 ▼▼▼ ---
         const isKangoPair = (s1, s2) => {
             const pairs = [['甲', '己'], ['乙', '庚'], ['丙', '辛'], ['丁', '壬'], ['戊', '癸']];
-            // s1 と s2 がペアのどちらかに一致するか、またはその逆の組み合わせに一致するかをチェック
             return pairs.some(p => (p[0] === s1 && p[1] === s2) || (p[0] === s2 && p[1] === s1));
         };
-        // --- ▲▲▲ isKangoPair関数の修正 ▲▲▲ ---
 
         const isShichuPair = (b1, b2) => {
             const pairs = [['子', '午'], ['丑', '未'], ['寅', '申'], ['卯', '酉'], ['辰', '戌'], ['巳', '亥']];
@@ -543,7 +604,6 @@
                 const s1 = originalStems[idx1];
                 const s2 = originalStems[idx2];
         
-                // isKangoPairで正しい組み合わせかまずチェック
                 if (!isKangoPair(s1, s2)) {
                     continue;
                 }
@@ -645,16 +705,13 @@
             
             if (stemsUI.includes('') || branchesUI.includes('')) return;
             
-            // Order for analysis functions is [year, month, day, hour]
             const sortedStems = [stemsUI[3], stemsUI[2], stemsUI[1], stemsUI[0]];
             const sortedBranches = [branchesUI[3], branchesUI[2], branchesUI[1], branchesUI[0]];
 
-            // Check for transformations based on original chart
             const kangoResult = checkKango(sortedStems, sortedBranches);
             let transformedStems = kangoResult.transformedStems;
             const shigoResult = checkShigo(transformedStems, sortedBranches);
 
-            // Update UI selects if stems were transformed by Kango
             const yearStemUI = document.getElementById('yearStem');
             const monthStemUI = document.getElementById('monthStem');
             const dayStemUI = document.getElementById('dayStem');
@@ -675,13 +732,11 @@
             const dayStem = transformedStems[2];
             if (!dayStem) return;
 
-            // Display Zokan (蔵干)
             document.getElementById('hourHidden').textContent = hiddenStemsPriority[sortedBranches[3]]?.join('・') || '';
             document.getElementById('dayHidden').textContent = hiddenStemsPriority[sortedBranches[2]]?.join('・') || '';
             document.getElementById('monthHidden').textContent = hiddenStemsPriority[sortedBranches[1]]?.join('・') || '';
             document.getElementById('yearHidden').textContent = hiddenStemsPriority[sortedBranches[0]]?.join('・') || '';
 
-            // Display Tsuhensei for Zokan (蔵干通変星)
             const hiddenGods = [sortedBranches[3], sortedBranches[2], sortedBranches[1], sortedBranches[0]].map(branch => {
                 const hidden = hiddenStemsPriority[branch];
                 return hidden ? hidden.map(hStem => getTenGod(dayStem, hStem)).join('・') : '';
@@ -692,20 +747,21 @@
             document.getElementById('yearHiddenGod').textContent = hiddenGods[3];
 
 
-            // Display Tsuhensei for Tenkan (天干通変星)
             document.getElementById('hourGod').textContent = getTenGod(dayStem, transformedStems[3]);
             document.getElementById('monthGod').textContent = getTenGod(dayStem, transformedStems[1]);
             document.getElementById('yearGod').textContent = getTenGod(dayStem, transformedStems[0]);
 
-            // Display 12 Un (十二運)
             document.getElementById('hour12').textContent = getTwelveStage(dayStem, sortedBranches[3]);
             document.getElementById('day12').textContent = getTwelveStage(dayStem, sortedBranches[2]);
             document.getElementById('month12').textContent = getTwelveStage(dayStem, sortedBranches[1]);
             document.getElementById('year12').textContent = getTwelveStage(dayStem, sortedBranches[0]);
             
-            analyzeDestiny(dayStem, transformedStems, sortedBranches, kangoResult.messages, shigoResult);
+            const strength = analyzeDestiny(dayStem, transformedStems, sortedBranches, kangoResult.messages, shigoResult);
             
-            if (window.currentGender && window.currentBirthDate) calculateDaiunn();
+            if (window.currentGender && window.currentBirthDate) {
+                calculateDaiunn(dayStem);
+                calculateNenun(dayStem, strength);
+            }
         }
         
         function getSpecialKakkyoku(strengthResult, dayStem, stems, branches) {
@@ -820,9 +876,8 @@
                 if (branch) elementCount[branchElements[branch]]++;
             });
 
-            // Reflect Shigo result on element balance
             if (shigoResult.strengthenedElement) {
-                elementCount[shigoResult.strengthenedElement] += 2; // Add weight to the strengthened element
+                elementCount[shigoResult.strengthenedElement] += 2;
             }
 
             const dayElement = stemElements[dayStem];
@@ -839,7 +894,7 @@
             const kakkyokuInfo = kakkyokuDescriptions[kakkyoku] || { title: '判定不能', description: 'あなたの価値観の源となる格局を特定できませんでした。' };
 
             let transformationHTML = '';
-            const allMessages = [...kangoMessages, ...shigoResult.messages].filter((v, i, a) => a.indexOf(v) === i); // Unique messages
+            const allMessages = [...kangoMessages, ...shigoResult.messages].filter((v, i, a) => a.indexOf(v) === i); 
             if (allMessages.length > 0) {
                 transformationHTML += `<div class="analysis-item">
                     <div class="analysis-title">命式の変化</div>`;
@@ -880,6 +935,7 @@
                     <div style="line-height: 1.6;">${getOverallFortune(dayStem, strength, elementCount)}</div>
                 </div>`;
             document.getElementById('analysisResult').innerHTML = analysisHTML;
+            return strength;
         }
         
         function judgeStrength(dayStem, stems, branches) {
@@ -1012,11 +1068,10 @@
             return fortune;
         }
 
-        function calculateDaiunn() {
+        function calculateDaiunn(dayStem) {
             const yearStem = document.getElementById('yearStem').value;
             const monthStem = document.getElementById('monthStem').value;
             const monthBranch = document.getElementById('monthBranch').value;
-            const dayStem = document.getElementById('dayStem').value;
             if (!yearStem || !monthStem || !monthBranch || !window.currentGender || !window.currentBirthDate) return;
             
             const gender = window.currentGender;
@@ -1057,7 +1112,7 @@
             const monthStemIndex = heavenlyStems.indexOf(monthStem);
             const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
             
-            let daiunnHTML = '<table class="daiunn-table"><tr><th>年齢</th><th>大運天干</th><th>大運地支</th><th>通変星</th><th>運勢傾向</th></tr>';
+            let daiunnHTML = '<table class="daiunn-table"><tr><th>年齢</th><th>大運天干</th><th>大運地支</th><th>通変星</th><th>十二運</th></tr>';
             for (let i = 0; i < 8; i++) {
                 const age = startAge + (i * 10);
                 const stemIndex = isForward ? (monthStemIndex + i + 1) % 10 : (monthStemIndex - i - 1 + 100) % 10;
@@ -1065,8 +1120,8 @@
                 const daiunnStem = heavenlyStems[stemIndex];
                 const daiunnBranch = earthlyBranches[branchIndex];
                 const tenGod = getTenGod(dayStem, daiunnStem);
-                const fortune = getDaiunnFortune(tenGod);
-                daiunnHTML += `<tr><td>${age}歳～${age+9}歳</td><td>${daiunnStem}</td><td>${daiunnBranch}</td><td>${tenGod}</td><td>${fortune}</td></tr>`;
+                const stage = getTwelveStage(dayStem, daiunnBranch);
+                daiunnHTML += `<tr><td>${age}歳～${age+9}歳</td><td>${daiunnStem}</td><td>${daiunnBranch}</td><td>${tenGod}</td><td>${stage}</td></tr>`;
             }
             daiunnHTML += '</table>';
             
@@ -1074,17 +1129,59 @@
             document.getElementById('daiunnSection').style.display = 'block';
         }
 
-        function getDaiunnFortune(tenGod) {
-            const fortunes = {
-                '比肩': '独立心が強まり、自分の道を切り開く時期', '劫財': '協力者との出会い、競争心が高まる時期',
-                '食神': '才能開花、楽しみや趣味が充実する時期', '傷官': '創造性発揮、変革や挑戦の時期',
-                '正財': '経済的安定、堅実な成果を得る時期', '偏財': '臨時収入、チャンスや幸運に恵まれる時期',
-                '正官': '社会的地位向上、責任ある立場につく時期', '偏官': '実力発揮、困難を乗り越える時期',
-                '印綬': '学習と成長、知識や技術習得の時期', '偏印': '独創性発揮、新しい分野への挑戦の時期'
-            };
-            return fortunes[tenGod] || '変化と成長の時期';
+        function calculateNenun(dayStem, strength) {
+            const startYear = parseInt(document.getElementById('nenunStartYear').value) || new Date().getFullYear();
+            if (!dayStem || !strength) return;
+
+            const strengthType = strength.includes('身強') || strength.includes('極身強') ? 'strong' : 'weak';
+
+            let nenunHTML = '<table class="nenun-table"><tr><th>年</th><th>年干支</th><th>天干通変星</th><th>地支通変星</th><th>運勢</th></tr>';
+            for (let i = 0; i < 10; i++) {
+                const year = startYear + i;
+                const yearPillar = getSixtyPillar((year - 1864) % 60);
+
+                const stemGod = getTenGod(dayStem, yearPillar.stem);
+                
+                // Get branch god from main hidden stem
+                const mainHiddenStem = hiddenStemsPriority[yearPillar.branch]?.[0];
+                const branchGod = getTenGod(dayStem, mainHiddenStem);
+
+                const stemFortune = nenunFortunes[stemGod]?.[strengthType] || '－';
+                const branchFortune = nenunFortunes[branchGod]?.[strengthType] || '－';
+
+                let fortuneHTML = '';
+                if (stemGod) {
+                    fortuneHTML += `<div><strong>${stemGod}の運気（表面的）:</strong><br>${stemFortune}</div>`;
+                }
+                if (branchGod && stemGod !== branchGod) {
+                    fortuneHTML += `<div style="margin-top:8px;"><strong>${branchGod}の運気（本質的）:</strong><br>${branchFortune}</div>`;
+                } else if (branchGod && stemGod === branchGod) {
+                     fortuneHTML += `<div style="margin-top:8px;">(本質的にも同じ運気です)</div>`;
+                }
+
+                nenunHTML += `<tr>
+                    <td>${year}年</td>
+                    <td>${yearPillar.stem}${yearPillar.branch}</td>
+                    <td>${stemGod || '－'}</td>
+                    <td>${branchGod || '－'}</td>
+                    <td>${fortuneHTML}</td>
+                </tr>`;
+            }
+            nenunHTML += '</table>';
+            
+            document.getElementById('nenunResult').innerHTML = nenunHTML;
+            document.getElementById('nenunSection').style.display = 'block';
         }
+        
+        // This function is called by the new "recalculate" button for Nenun
+        function updateNenun() {
+            const dayStem = document.getElementById('dayStem').value;
+            const strength = document.querySelector('.analysis-item:nth-child(4) > div:last-child').textContent;
+            if (dayStem && strength) {
+                calculateNenun(dayStem, strength);
+            }
+        }
+
     </script>
 </body>
 </html>
-
