@@ -897,6 +897,45 @@
             
             const kakkyokuInfo = kakkyokuDescriptions[kakkyoku] || { title: '判定不能', description: 'あなたの価値観の源となる格局を特定できませんでした。' };
 
+            // Start: Added logic for counting Tsuhensei
+            const tsuhenseiList = [];
+            // Tenkan (Heavenly Stems)
+            tsuhenseiList.push(getTenGod(dayStem, stems[0])); // Year
+            tsuhenseiList.push(getTenGod(dayStem, stems[1])); // Month
+            tsuhenseiList.push(getTenGod(dayStem, stems[3])); // Hour
+
+            // Zokan Honki (Main Hidden Stems)
+            tsuhenseiList.push(getTenGod(dayStem, hiddenStemsPriority[branches[0]]?.[0])); // Year
+            tsuhenseiList.push(getTenGod(dayStem, hiddenStemsPriority[branches[1]]?.[0])); // Month
+            tsuhenseiList.push(getTenGod(dayStem, hiddenStemsPriority[branches[2]]?.[0])); // Day
+            tsuhenseiList.push(getTenGod(dayStem, hiddenStemsPriority[branches[3]]?.[0])); // Hour
+
+            const tsuhenseiCounts = tsuhenseiList.reduce((acc, god) => {
+                if (god) {
+                    acc[god] = (acc[god] || 0) + 1;
+                }
+                return acc;
+            }, {});
+
+            let tsuhenseiCountHTML = '';
+            const orderedGods = ['比肩', '劫財', '食神', '傷官', '偏財', '正財', '偏官', '正官', '偏印', '印綬'];
+            const parts = orderedGods.map(god => {
+                const count = tsuhenseiCounts[god] || 0;
+                return count > 0 ? `<strong>${god}:</strong> ${count}個` : '';
+            }).filter(part => part !== '');
+
+            if (parts.length > 0) {
+                tsuhenseiCountHTML = `
+                    <div class="analysis-item">
+                        <div class="analysis-title">通変星の数（天干と蔵干本気）</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px;">
+                            ${parts.map(p => `<div style="padding: 8px; background: #f0f2f5; border-radius: 4px; text-align: center;">${p}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            // End: Added logic
+
             let transformationHTML = '';
             const allMessages = [...kangoMessages, ...shigoResult.messages].filter((v, i, a) => a.indexOf(v) === i); 
             if (allMessages.length > 0) {
@@ -934,6 +973,7 @@
                     <div class="analysis-title">身強・身弱判定</div>
                     <div>${strength}</div>
                 </div>
+                ${tsuhenseiCountHTML}
                 <div class="analysis-item">
                     <div class="analysis-title">総合運勢</div>
                     <div style="line-height: 1.6;">${getOverallFortune(dayStem, strength, elementCount)}</div>
