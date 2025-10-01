@@ -150,7 +150,7 @@
             text-align: center;
             border: 1px solid #ddd;
         }
-        .nenun-table td:last-child {
+        .daiunn-table td:last-child, .nenun-table td:last-child {
             text-align: left;
             padding: 8px;
             line-height: 1.5;
@@ -267,6 +267,8 @@
                         <td id="monthGod"></td>
                         <td id="yearGod"></td>
                     </tr>
+                    <!-- 十二運の行を削除 -->
+                    <!--
                     <tr>
                         <td><strong>十二運</strong></td>
                         <td id="hour12"></td>
@@ -274,6 +276,7 @@
                         <td id="month12"></td>
                         <td id="year12"></td>
                     </tr>
+                    -->
                 </tbody>
             </table>
             
@@ -320,7 +323,7 @@
         };
 
         const kakkyokuDescriptions = {
-            // Normal Patterns
+            // Normal Patterns (普通格局)
             '建禄格': { title: '目的のために頑張りがきく創業者', description: '独立心が旺盛で、率直で向こう気の強い人です。見かけは平静を装っていても負けず嫌い。意志が強く、目的を達するまで張り抜きます。どのような場にあっても自分を中心とした影響力の渦を作ります。' },
             '月刃格': { title: '芯が強く忍耐力のある謀略家', description: '自尊心が強いにもかかわらず、何を考えているのか分かりにくい人です。心の中では自分を高く見ており、力ずくで勝敗をつけようとする癖があります。負けず嫌いで、巻き返しのチャンスを虎視眈眈とねらいます。' },
             '食神格': { title: '感覚とロマンに生きる芸術家', description: '気持ちのよいこと、おいしいものが大好きな人です。心は広く大らかで、物事に対して楽観的。華やかな芸術の才能に満ちており、温和さと優雅な雰囲気で人を魅了します。' },
@@ -331,13 +334,13 @@
             '正官格': { title: '礼儀と規律を守る国家公務員', description: '規律を守り、組織のルールに従う人です。高貴で優雅な気質を備えています。知的であり、規則を守って順序よく行動します。どのような環境にあっても、法を守り、自分のことよりも人のために尽くします。' },
             '偏印格': { title: '臨機応変で時間にとらわれない記者', description: '物質世界よりも、内面の世界を重視する人です。知的好奇心が旺盛で、直感が非常に発達していて、物事の核心をつかむ洞察力があります。束縛されることを嫌い、孤独な時間を楽しむところがあります。' },
             '印綬格': { title: 'インテリで研究熱心な学者', description: '好奇心が旺盛な人です。聡明で豊富な知識を持ち、控えめです。何よりも学ぶことが好きで、記憶力がよく、様々な知識を吸収します。伝統や、正統な学問、学術を重んじる秀才です。' },
-            // Special Patterns (Tokubetsu Kakkyoku)
-            '従旺格': { title: '我が道を歩む独立独歩の人', description: '自我が非常に強く、自分の信念を貫くことで道が開けます。多くの友人や兄弟に助けられる運を持ち、マイペースにまっすぐ進む人生です。' },
-            '従強格': { title: '知的好奇心旺盛な学究の人', description: '学習力に優れ、学問や研究の世界で才能を発揮します。師や母親のような存在からの教えによって成長し、独自の人生観を築きます。' },
-            '従児格': { title: '芸術的才能に溢れたクリエイター', description: '創造力、表現力、技術力に非常に優れています。芸術、芸能、企画などの分野でクリエイティブな才能を最大限に発揮する人生です。' },
-            '従財格': { title: '人脈と財を築く社交的な商才人', description: '人付き合いがうまく、サービス精神を発揮することで多くの人に好かれ、巨額の富を築く才能があります。お金に極めて恵まれた人生を送ります。' },
-            '従殺格': { title: '組織の中で地位を築く権威の人', description: '忍耐強く、管理能力に優れています。組織の中で序列と秩序を守り、任務を遂行することで、社会的に高い地位と権力を得る人生です。' },
-            '従勢格': { title: '時代の流れに乗る柔軟な世渡り上手', description: '様々な才能に満ち溢れ、周囲の状況に柔軟に対応していくことで幸運を掴みます。富にも地位にも恵まれ、多くの人に好かれる円満な人生です。' },
+            // Special Patterns (特別格局) - Updated with details from PDF
+            '従旺格': { title: '我が道を歩む独立独歩の人', description: '自分自身の集合体でもある従旺格は、我が道をマイペースにまっすぐに歩む人生です。普通の人とは全く違う感覚と人生観を持っています。自我が強く、主観を貫くと良い人生となります。多くの友人や兄弟姉妹に助けられ、暖簾を守るような商家や寺の跡継ぎに生まれることも多いでしょう。' },
+            '従強格': { title: '知的好奇心旺盛な学究の人', description: '偏印と印綬ばかりの従強格の人は、学識の充実した人生を歩む人です。知的好奇心と学習力に優れており、秀才で、多くの本に囲まれて生活するでしょう。自我が強く聡明で、師や母親のように教え育てる人に囲まれ、生涯を通じてその教導によって成長します。' },
+            '従児格': { title: '芸術的才能に溢れたクリエイター', description: '命式が食神と傷官で占められ、創造力や企画力、芸術、技術などの才能が最大限に発揮される人生を送ります。頭の回転が速く、どのような場にあってもクリエイティブで芸術的な才能を発揮します。時代の流行をいち早くとらえ、ヒット商品を生み出します。' },
+            '従財格': { title: '人脈と財を築く社交的な商才人', description: '命式が偏財と正財で占められ、不動産、動産、人脈などを獲得する才能が最大限に発揮される人生です。人を喜ばせたりもてなしたりするのがうまく、お金を儲けて財産を築く能力を発揮し、お金に極めて恵まれた人生を送ります。' },
+            '従殺格': { title: '組織の中で地位を築く権威の人', description: '命式が偏官と正官で占められ、地位、権威、役職などに任ずる才能が最大限に発揮される人生を送ります。組織にあって上の命令に従い任務を遂行し、忍耐強く物事に取り組みます。管理能力に優れ、社会的に高い地位と権力を得ます。' },
+            '従勢格': { title: '時代の流れに乗る柔軟な世渡り上手', description: '自分以外の勢いに従う格局で、周りの環境や状況に柔軟に対応していくことで幸運を引き寄せます。様々な才能に満ちあふれており、富にも地位にも恵まれる人生を送ります。性格は円満で多くの人に好かれ、世渡りが上手です。' },
         };
         
         // Data from PDF for Nenun (Yearly Luck)
@@ -371,8 +374,8 @@
                 weak: '急に自分を試してみたくなって、大胆な行動をしたり、いちかばちかの勝負に出て失敗しやすいときです。変化の激しいときではありますが、自分から動くとかえって苦労がふえます。会社員は部署が変わるなどして、慣れない仕事のために苦労します。自営業の人は、内容を変えたり、店じまいせざるを得なくなったりします。仕事のストレスが大きいために、精神不安になりやすく、安眠できないこともあります。訴訟や法的な問題が起きた場合は勝つ見込みは少なく、そのために立場も名誉も失ってしまうでしょう。このようなときは、下手に動かず、趣味に興じたり、旅行などで気分転換をしたりするとよいでしょう。'
             },
             '正官': {
-                strong: '社会的立場の高い人から引き立てを受けるときです。競争に勝って社会的に高い地位が得られることで自信がついてきます。それまでしてきた努力が社会的な形で実を結びます。そのことで周囲からも高い評価を受けるでしょう。会社員は、昇級や出世が期待できます。今よりも待遇のよいところへの栄転や引き抜きもあるでしょう。自営業の人は、協業や業務提携の話がまとまります。金銭的にも順調です。社会的な信用がありますから、土地や住宅の購入、あるいは事業プランのための資金作りの好機です。訴訟や法的な問題が起きても有利に運び、かえって信用や評価を高めることになるでしょう。',
-                weak: '周囲から期待が寄せられて、精神的な重圧に苦しみます。会社員は、新しい職場でなかなか仕事が覚えられないといった苦労が多く、緊張とストレスから体調を崩しがちです。自営業の人は、古いスタイルに固執して、社会の変化にうまく対応していけず流行に乗れません。試験はレベルを落とさないと合格できません。この時期に発展を望んで無理に何かをしようとすると、信用も地位もなくしてしまいます。グループや組織ぐるみで何かを計画しても計画倒れになりやすいでしょう。いずれにせよ結果はよくないので、新しい事業は控えましょう。保証人になるのも避けたほうがよく、法的な問題になったり訴訟を起こされたりする可能性もあります。'
+                strong: '社会的立場の高い人から引き立てを受けるときです。競争に勝って社会的に高い地位が得られることで自信がついてきます。それまでしてきた努力が社会的な形で実を結びます。そのことで周囲からも高い評価を受けるでしょう。会社員は、昇級や出世が期待できます。今よりも待遇のよいところへの栄転や引き抜きもあるでしょう。自営業の人は、協業や業務提携の話がまとまります。金銭的にも順調です。社会的な信用がありますから、土地や住宅の購入、あるいは事業プランのための資金作りの好機です。訴訟や法的な問題が起きた場合は有利に運び、かえって信用や評価を高めることになるでしょう。',
+                weak: '周囲から期待が寄せられて、精神的な重圧に苦みます。会社員は、新しい職場でなかなか仕事が覚えられないといった苦労が多く、緊張とストレスから体調を崩しがちです。自営業の人は、古いスタイルに固執して、社会の変化にうまく対応していけず流行に乗れません。試験はレベルを落とさないと合格できません。この時期に発展を望んで無理に何かをしようとすると、信用も地位もなくしてしまいます。グループや組織ぐるみで何かを計画しても計画倒れになりやすいでしょう。いずれにせよ結果はよくないので、新しい事業は控えましょう。保証人になるのも避けたほうがよく、法的な問題になったり訴訟を起こされたりする可能性もあります。'
             },
             '偏印': {
                 weak: '直観が冴えます。精神的な悟りに目覚めるときです。今まで理解できなかったことも、突然、気づきに至るでしょう。お金や物質があふれた現実的な世界よりも精神世界に興味を持つときです。それがきっかけで、透徹した境地に至ったり、優れた芸術作品や新しいプランを思いついたりします。仕事上でも変化があります。趣味が利益を生んだり、副業を持ったりと、芸術や工芸などから思いがけない喜びを得られます。引っ越しや旅をすると、何らかの有益なインスピレーションを得られるでしょう。また、年長者や先生からの大切な教えや助力を受けられます。',
@@ -750,16 +753,17 @@
             document.getElementById('hourGod').textContent = getTenGod(dayStem, transformedStems[3]);
             document.getElementById('monthGod').textContent = getTenGod(dayStem, transformedStems[1]);
             document.getElementById('yearGod').textContent = getTenGod(dayStem, transformedStems[0]);
-
-            document.getElementById('hour12').textContent = getTwelveStage(dayStem, sortedBranches[3]);
-            document.getElementById('day12').textContent = getTwelveStage(dayStem, sortedBranches[2]);
-            document.getElementById('month12').textContent = getTwelveStage(dayStem, sortedBranches[1]);
-            document.getElementById('year12').textContent = getTwelveStage(dayStem, sortedBranches[0]);
+            
+            // 十二運の計算と表示をコメントアウト
+            // document.getElementById('hour12').textContent = getTwelveStage(dayStem, sortedBranches[3]);
+            // document.getElementById('day12').textContent = getTwelveStage(dayStem, sortedBranches[2]);
+            // document.getElementById('month12').textContent = getTwelveStage(dayStem, sortedBranches[1]);
+            // document.getElementById('year12').textContent = getTwelveStage(dayStem, sortedBranches[0]);
             
             const strength = analyzeDestiny(dayStem, transformedStems, sortedBranches, kangoResult.messages, shigoResult);
             
             if (window.currentGender && window.currentBirthDate) {
-                calculateDaiunn(dayStem);
+                calculateDaiunn(dayStem, strength);
                 calculateNenun(dayStem, strength);
             }
         }
@@ -1068,18 +1072,18 @@
             return fortune;
         }
 
-        function calculateDaiunn(dayStem) {
+        function calculateDaiunn(dayStem, strength) {
             const yearStem = document.getElementById('yearStem').value;
             const monthStem = document.getElementById('monthStem').value;
             const monthBranch = document.getElementById('monthBranch').value;
-            if (!yearStem || !monthStem || !monthBranch || !window.currentGender || !window.currentBirthDate) return;
-            
+            if (!yearStem || !monthStem || !monthBranch || !window.currentGender || !window.currentBirthDate || !strength) return;
+
             const gender = window.currentGender;
             const birthDateWithTime = window.currentBirthDate;
             const yearStemIndex = heavenlyStems.indexOf(yearStem);
             const isYangYear = yearStemIndex % 2 === 0;
             const isForward = (isYangYear && gender === 'male') || (!isYangYear && gender === 'female');
-            
+
             const year = birthDateWithTime.getFullYear(), month = birthDateWithTime.getMonth() + 1;
             let daysDiff = 0;
             let setsuiriDateForCalc;
@@ -1107,27 +1111,52 @@
                 }
                 daysDiff = (birthDateWithTime.getTime() - setsuiriDateForCalc.getTime()) / (1000 * 60 * 60 * 24);
             }
-            
+
             const startAge = Math.max(1, Math.round(daysDiff / 3));
             const monthStemIndex = heavenlyStems.indexOf(monthStem);
             const monthBranchIndex = earthlyBranches.indexOf(monthBranch);
             
-            let daiunnHTML = '<table class="daiunn-table"><tr><th>年齢</th><th>大運天干</th><th>大運地支</th><th>通変星</th><th>十二運</th></tr>';
+            const strengthType = strength.includes('身強') || strength.includes('極身強') ? 'strong' : 'weak';
+
+            let daiunnHTML = '<table class="daiunn-table"><tr><th>年齢</th><th>大運干支</th><th>天干通変星</th><th>地支通変星</th><th>運勢</th></tr>';
             for (let i = 0; i < 8; i++) {
                 const age = startAge + (i * 10);
                 const stemIndex = isForward ? (monthStemIndex + i + 1) % 10 : (monthStemIndex - i - 1 + 100) % 10;
                 const branchIndex = isForward ? (monthBranchIndex + i + 1) % 12 : (monthBranchIndex - i - 1 + 120) % 12;
                 const daiunnStem = heavenlyStems[stemIndex];
                 const daiunnBranch = earthlyBranches[branchIndex];
-                const tenGod = getTenGod(dayStem, daiunnStem);
-                const stage = getTwelveStage(dayStem, daiunnBranch);
-                daiunnHTML += `<tr><td>${age}歳～${age+9}歳</td><td>${daiunnStem}</td><td>${daiunnBranch}</td><td>${tenGod}</td><td>${stage}</td></tr>`;
+
+                const stemGod = getTenGod(dayStem, daiunnStem);
+                const mainHiddenStem = hiddenStemsPriority[daiunnBranch]?.[0];
+                const branchGod = getTenGod(dayStem, mainHiddenStem);
+
+                const stemFortune = nenunFortunes[stemGod]?.[strengthType] || '－';
+                const branchFortune = nenunFortunes[branchGod]?.[strengthType] || '－';
+
+                let fortuneHTML = '';
+                if (stemGod) {
+                    fortuneHTML += `<div><strong>${stemGod}の運気（表面的）:</strong><br>${stemFortune}</div>`;
+                }
+                if (branchGod && stemGod !== branchGod) {
+                    fortuneHTML += `<div style="margin-top:8px;"><strong>${branchGod}の運気（本質的）:</strong><br>${branchFortune}</div>`;
+                } else if (branchGod && stemGod === branchGod) {
+                     fortuneHTML += `<div style="margin-top:8px;">(本質的にも同じ運気です)</div>`;
+                }
+                
+                daiunnHTML += `<tr>
+                    <td>${age}歳～${age+9}歳</td>
+                    <td>${daiunnStem}${daiunnBranch}</td>
+                    <td>${stemGod || '－'}</td>
+                    <td>${branchGod || '－'}</td>
+                    <td>${fortuneHTML}</td>
+                </tr>`;
             }
             daiunnHTML += '</table>';
-            
+
             document.getElementById('daiunnResult').innerHTML = daiunnHTML;
             document.getElementById('daiunnSection').style.display = 'block';
         }
+
 
         function calculateNenun(dayStem, strength) {
             const startYear = parseInt(document.getElementById('nenunStartYear').value) || new Date().getFullYear();
